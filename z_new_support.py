@@ -35,6 +35,8 @@ combos_matrix = [[f"{r_1}{r_2}" if i == j else f"{r_1}{r_2}s" if i < j else f"{r
 
 position_name_change = {"UTG": "EP", "UTG1": "MP", "LJ": "LJ", "HJ": "HJ", "CO": "CO", "BTN": "BU", "SB": "SB", "BB": "BB"}
 
+positions = list(position_name_change.keys())
+
 rev_position_name_change = {v: k for k, v in position_name_change.items()}
 
 action_name_change = {"Call": "C", "Check": "C", "Raise": "R", "Allin": "A", "Fold": "F"}

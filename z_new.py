@@ -174,13 +174,48 @@ def get_right_action_precise_frequency(combo_info: dict):
     return right_action, final_rng
 
 
-def play(combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict):
+def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text):
+    right_action_freq = [v[0] for k, v in combo_info.items() if k == right_action][0]
+    line1 = ""
+    line2 = ""
+    line1 += f"🎯{action_choosed} "
+    right_action_ev = [v[1] for k, v in combo_info.items() if k == right_action][0]
+    action_choosed_freq = [v[0] for k, v in combo_info.items() if k == action_choosed][0]
+    action_choosed_ev = [v[1] for k, v in combo_info.items() if k == action_choosed][0]
+    line1 += f"✅{right_action}  "
+    line2 += f"{combo} | RNG: {rng}     "
+    for i, (action, data) in enumerate(combo_info.items()):
+        line2 += f"{action}: {data}"
+        if i < len(combo_info) - 1:
+            line2 += "  |  "
+    if action_choosed == right_action:
+        answer_color = "green"
+        answer_text_color = "white"
+        line1 += f"   {spot_text}   👉 RIGHT ANSWER 👈   Acc/EVloss: (1 / 0)"
+        update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
+        
+        return 1, 0, right_action_ev
+    else:
+        freq_spread = normalize_float(1 - ((right_action_freq - action_choosed_freq) / 100), 4) if right_action_freq > action_choosed_freq else normalize_float(1 - ((action_choosed_freq - right_action_freq) / 100), 4)
+        ev_spread = -normalize_float(abs(action_choosed_ev) - right_action_ev) if right_action_ev > action_choosed_ev else 0
+        if ev_spread == 0:
+            answer_color = "yellow"
+            answer_text_color = "black"
+            line1 += f"   {spot_text}   👉 IMPRECISE ANSWER 👈   Acc/EVloss: ({freq_spread} / {ev_spread})"
+        else:
+            answer_color = "red"
+            answer_text_color = "black"
+            line1 += f"   {spot_text}   👉 WRONG ANSWER 👈   Acc/EVloss: ({freq_spread} / {ev_spread})"
+        update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
+
+        return freq_spread, ev_spread, right_action_ev
+
+
+def play(positions_in_order, combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict):
     combo = random.choice(combo_pool)
     combo_info = combos_dict[combo][1]
     right_action, rng = get_right_action_precise_frequency(combo_info)
-    # rng_label.config(bg=bgd_color, text=str(rng), font=("Arial", 20))
     spot_text = mode_str + " " + spot_string
-    # spot_str_label.config(text=spot_text)
     combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
     chart = draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos)
     chart_tk = ImageTk.PhotoImage(chart)
@@ -191,33 +226,31 @@ def play(combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_dep
     pool_label.config(image=pool_chart_tk)
     pool_label.image = pool_chart_tk
     # pool_frame.place(x=1038, y=368)
+    draw_table(table_canvas, combo, rng, positions_in_order, pot_odds_and_stacks, positions_actions, spot_text)
     action_choosed = None
     def choose_action(i):
         nonlocal action_choosed
         action_choosed = spot_actions[i]
         action_selected.set(True)
+    for widget in btns_frame.winfo_children():
+        widget.destroy()
     for i, action in enumerate(spot_actions):
-        btn = tk.Button(
-            btns_frame,
-            text=f"{i+1}: {action}",
-            command=lambda i=i: choose_action(i),
-            font=("Arial", 14, "bold")
-        )
+        btn = tk.Button(btns_frame, text=f"{i+1}: {action}", command=lambda i=i: choose_action(i), font=("Arial", 14, "bold"))
         btn.grid(row=0, column=i, padx=3)
     action_selected.set(False)
     for i in range(len(spot_actions)):
-        root.bind(
-            str(i + 1),
-            lambda event, i=i: choose_action(i)
-        )
+        root.bind(str(i + 1), lambda event, i=i: choose_action(i) )
     root.wait_variable(action_selected)
-    # freq_point, ev_point, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text)
+    freq_point, ev_point, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text)
 
-    # return combo, freq_point, ev_point, right_action_ev
+    return combo, freq_point, ev_point, right_action_ev
 
 
 def start_trainer():
-    global training
+    global training, table_canvas, lr_canvas, cr_canvas
+    table_canvas.delete("all")
+    lr_canvas.delete("all")
+    cr_canvas.delete("all")
     if spots_listbox.size() == 0:
         add_solution()
     training = True
@@ -238,8 +271,38 @@ def start_trainer():
         hero_idx = positions.index(spot_position)
         positions_in_order = positions[hero_idx:] + positions[:hero_idx]
         pool = get_combo_pool(options[4], spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos)
-        combo, freq_point, ev_point, right_action_ev = play(pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
-
+        combo, freq_point, ev_point, right_action_ev = play(positions_in_order, pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+        played_hands.setdefault(combo, 0)
+        played_hands[combo] += 1
+        total_freq_points += freq_point
+        ev_loss += ev_point
+        total_ev += right_action_ev
+        result_dict["hands_played"] += 1
+        if freq_point == 1:
+            result_dict["right_hands_count"] += 1
+            right_hands.setdefault(combo, 0)
+            right_hands[combo] += 1
+            if result_dict["last_right"]:
+                result_dict["right_streak"] += 1
+                result_dict["max_streak"] = result_dict["right_streak"] if result_dict["right_streak"] > result_dict["max_streak"] else result_dict["max_streak"]
+            result_dict["last_right"] = True
+        elif ev_point == 0:
+            result_dict["imprecise_hands_count"] += 1
+            imprecise_hands.setdefault(combo, 0)
+            imprecise_hands[combo] += 1
+            result_dict["last_right"] = False
+            result_dict["right_streak"] = 0
+        else:
+            result_dict["wrong_hands_count"] += 1
+            wrong_hands.setdefault(combo, 0)
+            wrong_hands[combo] += 1
+            result_dict["last_right"] = False
+            result_dict["right_streak"] = 0
+        accuracy = normalize_float(total_freq_points / result_dict["hands_played"])
+        line = f"🟢 {normalize_float(result_dict["right_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"]}) | 🟡 {normalize_float(result_dict["imprecise_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["imprecise_hands_count"]}) | 🔴 {normalize_float(result_dict["wrong_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["wrong_hands_count"]}) | 👍 {normalize_float((result_dict["right_hands_count"] + result_dict["imprecise_hands_count"])/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"] + result_dict["imprecise_hands_count"]}) | Streak: {result_dict["right_streak"]} | Best Streak: {result_dict["max_streak"]}"
+        p_line1 = f"✅{normalize_float(result_dict["right_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"]})  ⚠️{normalize_float(result_dict["imprecise_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["imprecise_hands_count"]})  ❎{normalize_float(result_dict["wrong_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["wrong_hands_count"]})  👍{normalize_float((result_dict["right_hands_count"] + result_dict["imprecise_hands_count"])/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"] + result_dict["imprecise_hands_count"]})  🔥{result_dict["right_streak"]}  🏆{result_dict["max_streak"]}"
+        p_line2 = f"HANDS: {result_dict["hands_played"]} | ACC: {normalize_float(accuracy*100, 2)}% | EV loss: {normalize_float(ev_loss, 2)}/{normalize_float(total_ev, 2)}"
+        update_current_result_frame(p_line1, p_line2)
 
 def stop_trainer():
     global training
@@ -294,13 +357,14 @@ def update_current_result_frame(line_1: str, line_2: str):
     cr_canvas.create_text(current_progress_line2_x, current_progress_line2_y, font=("Arial", 12, "bold"), text=line_2, fill="white")
 
 
-def draw_table(canvas: tk. Canvas):
+def draw_table(canvas: tk. Canvas, combo, rng, positions_in_order, pot_odds_and_stacks, positions_actions, spot_text):
     canvas.delete("all")
     canvas.create_oval(oval_center_x - oval_radius_x, oval_center_y - oval_radius_y, oval_center_x + oval_radius_x, oval_center_y + oval_radius_y, fill=table_color, outline="black")
-    table_line1 = "MTT ChipEV | 200 bb | UTG1 vs"
-    table_line2 = "UTG R2.3 | UTG1 R8.23 | BTN R20.84 | SB C | BB C | UTG R60.88"
-    pot_odds = "Pot odds: 43.5%"
-    rng = "100"
+    spot_text_parts = spot_text.split(" | ")
+    table_line1 = " | ".join(part for part in spot_text_parts[:2])
+    table_line2 = " | ".join(part for part in spot_text_parts[2:])
+    pot_odds = f"Pot odds: {pot_odds_and_stacks[0]["pot_odds"]} %"
+    rng = rng
     canvas.create_text(table_line1_x, table_line1_y, font=("Arial", 9, "bold"), text=table_line1)
     canvas.create_text(table_line2_x, table_line2_y, font=("Arial", 9), text=table_line2)
     canvas.create_text(pot_odds_x, pot_odds_y, font=("Arial", 11, "bold"), text=pot_odds)
@@ -308,13 +372,13 @@ def draw_table(canvas: tk. Canvas):
     canvas.create_text(562, 533, font=("Arial", 30), text=rng)
     seats: list[Seat] = []
     for i in range(8):
-        seats.append(Seat(i, canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y))
-        seats[i].draw_seat()
+        seats.append(Seat(i, canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y, combo, positions_in_order, pot_odds_and_stacks, positions_actions))
+        seats[i].draw_seat(combo)
 
 
-def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str):
+def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str, line1_text_color:str):
     lr_canvas.delete("all")
-    line1_text = lr_canvas.create_text(last_result_line1_x, last_result_line1_y + 1, font=("Arial", 9, "bold"), text=line_1, fill="white")
+    line1_text = lr_canvas.create_text(last_result_line1_x, last_result_line1_y + 1, font=("Arial", 9, "bold"), text=line_1, fill=line1_text_color)
     x1, y1, x2, y2 = lr_canvas.bbox(line1_text)
     line1_rect = lr_canvas.create_rectangle(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=line1_color, outline="")
     lr_canvas.tag_raise(line1_text, line1_rect)
@@ -372,7 +436,7 @@ table_line1_y = oval_center_y - 11
 table_line2_x = oval_center_x
 table_line2_y = oval_center_y + 11
 pot_odds_x = oval_center_x
-pot_odds_y = oval_center_y + 30
+pot_odds_y = oval_center_y + 45
 
 current_progress_line1_x = current_progress_frame_width // 2
 current_progress_line1_y = (current_progress_frame_height // 5) + 1
@@ -429,11 +493,11 @@ last_result_frame.pack(side="bottom", fill="both")
 lr_canvas = tk.Canvas(last_result_frame, width=last_result_frame_width, height=last_result_frame_height, highlightthickness=0, bd=0, bg=bgd_color)
 lr_canvas.pack()
 
-options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_height, bg=btn_color)
+options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_height, bg=bgd_color)
 options_frame.pack(side="left")
 options_frame.pack_propagate(False)
 
-dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
+dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 dropdowns_frame.place(relx=0.5, rely=0.08, anchor="center")
 depth_dropdown = tk.OptionMenu(dropdowns_frame, depth_var, *depths)
 depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=(0,5))
@@ -446,7 +510,7 @@ villain_position_dropdown.grid(row=1, column=1, sticky="w")
 combo_pool_type_dropdown = tk.OptionMenu(dropdowns_frame, combo_pool_type_var, *combo_pool_types)
 combo_pool_type_dropdown.grid(row=2, column=0, columnspan=2, pady=(5,0))
 
-solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
+solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 solutions_btns_frame.place(relx=0.5, rely=0.18, anchor="center")
 add_solution_buttom = tk.Button(solutions_btns_frame, text="ADD SPOT", command=add_solution)
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=(5,0))
@@ -458,14 +522,14 @@ del_all_buttom.grid(row=3, column=2, pady=(5,0))
 spots_listbox = tk.Listbox(root, width=39, height=15)
 spots_listbox.place(x=801, y=150)
 
-start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
+start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 start_stop_btns_frame.place(relx=0.5, rely=0.6, anchor="center")
 start_trainer_buttom = tk.Button(start_stop_btns_frame, text="START", command=start_trainer)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
 stop_trainer_buttom = tk.Button(start_stop_btns_frame, text="STOP", command=stop_trainer)
 stop_trainer_buttom.grid(row=0, column=1)
 
-charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=table_color)
+charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
 charts_frame.pack(side="left")
 help_frame = tk.Frame(charts_frame, bg="black", width=325, height=336)
 help_label = tk.Label(help_frame, bd=0, bg="black")
@@ -478,9 +542,9 @@ h_key_label.place(x=20, y=343)
 p_key_label = tk.Label(charts_frame, text="Type <p> to toggle pool")
 p_key_label.place(x=163, y=343)
 
-draw_table(table_canvas)
-update_current_result_frame("✅12923(100%)  ⚠️12355(100%)  ❎12456(100%)  👍18326(100%)  🔥2 | 🏆5", "HANDS: 999 | Acc: 99% | EV loss: 12354.5/987545261")
-update_last_combo_result_frame("🎯Allin 200 ✅Raise 2.3  | Acc/EVloss: 0.4424 / -14.35 | 👉 WRONG ANSWER 👈 | MTT ChipEV 200 | UTG1 vs_rfi UTG", "KQs | RNG: 59    Allin: [0, -0.2] | Raise 2.3: [100, 2.1] | Fold: [0, 0]", "red")
+# draw_table(table_canvas, positions)
+# update_current_result_frame("✅12923(100%)  ⚠️12355(100%)  ❎12456(100%)  👍18326(100%)  🔥2 | 🏆5", "HANDS: 999 | Acc: 99% | EV loss: 12354.5/987545261")
+# update_last_combo_result_frame("🎯Allin 200 ✅Raise 2.3  | Acc/EVloss: 0.4424 / -14.35 | 👉 WRONG ANSWER 👈 | MTT ChipEV 200 | UTG1 vs_rfi UTG", "KQs | RNG: 59    Allin: [0, -0.2] | Raise 2.3: [100, 2.1] | Fold: [0, 0]", "red", "black")
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)

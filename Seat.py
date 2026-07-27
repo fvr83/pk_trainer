@@ -22,17 +22,34 @@ def get_combo_family(combo):
 
 
 class Seat():
-    def __init__(self, index, canvas: tk.Canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y):
+    def __init__(self, index, canvas: tk.Canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y, combo, positions_in_order, pot_odds_and_stacks, positions_actions):
         self.canvas = canvas
         self.index = index
-        self.position = "UTG1"
-        self.stack = "99999"
-        self.bet = "12345678"
+        self.position = "UTG1" if not positions_in_order else positions_in_order[index]
+        self.stack = pot_odds_and_stacks[1][self.position]
         self.action = ""
-
-        if self.bet == "":
-            self.bet = 0.5 if self.position == "SB" else 1 if self.position == "BB" else self.bet
-
+        if index == 0:
+            try:
+                self.action = next(l[2] for l in positions_actions[::-1] if l[0] == self.position and l[2] != "spot")
+            except:
+                self.action = "N/A"
+        elif self.position == "BB":
+            try:
+                self.action = next(l[2] for l in positions_actions[::-1] if l[0] == self.position and l[2] != "spot")
+            except:
+                self.action = "N/A"
+        else:
+            self.action = next(l[2] for l in positions_actions[::-1] if l[0] == self.position and l[2] != "spot")
+        if self.action.startswith("C"):
+            self.bet = "1"
+        if self.action in ["N/A", "Fold"]:
+            self.bet = ""
+        if self.position in ["SB", "BB"] and self.action in ["N/A", "Fold"]:
+            self.bet = "0.5" if self.position == "SB" else "1"
+        if "Raise" in self.action or "Allin" in self.action:
+            self.bet = self.action.split(" ")[1]
+        # if self.bet == "":
+        #     self.bet = 0.5 if self.position == "SB" else 1 if self.position == "BB" else self.bet
         self.cards_width = 152 if index == 0 else 64
         self.cards_height = int((self.cards_width / 2) * 1.36)
         self.circle_radius = 35
@@ -113,7 +130,7 @@ class Seat():
                 y += step
 
 
-    def draw_seat(self):
+    def draw_seat(self, combo):
         self.canvas.create_oval(
             self.circle_center_x - self.circle_radius,
             self.circle_center_y - self.circle_radius,
@@ -123,13 +140,13 @@ class Seat():
             outline="black"
         )
         
-        if self.position == "UTG1":
+        if self.position == "BTN":
             self.canvas.create_oval(self.btn_center_x - self.btn_radius, self.btn_center_y - self.btn_radius, self.btn_center_x + self.btn_radius, self.btn_center_y + self.btn_radius, fil="#F39508")
             self.canvas.create_text(self.btn_center_x, self.btn_center_y, font=("Arial", 10, "bold"), text="D")
         self.canvas.create_text(self.position_center_x, self.position_center_y, font=("Arial", 18, "bold"), text=self.position)
         self.canvas.create_text(self.stack_center_x, self.stack_center_y, font=("Arial", 10, "bold"), text=self.stack)
         self.canvas.create_text(self.bet_center_x, self.bet_center_y, font=("Arial", 9, "bold"), text=self.bet)
-        if self.index != 0:
+        if self.index != 0 and self.action != "Fold":
             self.draw_hidden_cards()
-        else:
-            self.draw_hero_cards("KQo")
+        elif self.index == 0:
+            self.draw_hero_cards(combo)

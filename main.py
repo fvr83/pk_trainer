@@ -723,6 +723,7 @@ def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text):
         answer_color = "green"
         line1 += f"   {spot_text}   🟢 RIGHT ANSWER 🟢   Acc/EVloss: (1 / 0)"
         line1_label.config(text=line1, bg=answer_color)
+        
         return 1, 0, right_action_ev
     else:
         freq_spread = normalize_float(1 - ((right_action_freq - action_choosed_freq) / 100), 4) if right_action_freq > action_choosed_freq else normalize_float(1 - ((action_choosed_freq - right_action_freq) / 100), 4)
@@ -736,6 +737,7 @@ def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text):
             answer_text_color = "black"
             line1 += f"   {spot_text}   🔴 WRONG ANSWER 🔴   Acc/EVloss: ({freq_spread} / {ev_spread})"
         line1_label.config(text=line1, fg=answer_text_color, bg=answer_color)
+
         return freq_spread, ev_spread, right_action_ev
 
 help_visible = False
