@@ -80,7 +80,7 @@ def add_solution():
     try:
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
     except:
-        print("NOT FOUND")
+        status_label.config(text="NOT FOUND")
         return
 
     item = " | ".join(options)
@@ -248,6 +248,7 @@ def play(positions_in_order, combo_pool, combos_order, mode_str, spot_string, sp
 
 def start_trainer():
     global training, table_canvas, lr_canvas, cr_canvas
+    status_label.config(text="TRAINING")
     table_canvas.delete("all")
     lr_canvas.delete("all")
     cr_canvas.delete("all")
@@ -263,7 +264,12 @@ def start_trainer():
     ev_loss = 0
     total_ev = 0
     while training:
-        options = random.choice(spots_listbox.get(0, tk.END))
+        try:
+            options = random.choice(spots_listbox.get(0, tk.END))
+        except:
+            status_label.config(text="NO SPOT SELECTED")
+
+            return
         opt_parts = options.split(" | ")
         options = [*opt_parts]
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
@@ -307,6 +313,7 @@ def start_trainer():
 def stop_trainer():
     global training
     training = False
+    status_label.config(text="STOPPED")
 
 
 def delete_all_solution():
@@ -423,8 +430,8 @@ current_progress_frame_height = 36
 table_frame_height = 560
 actions_frame_height = 75
 last_result_frame_height = 36
-options_frame_width, options_frame_height = 241, root_height
-charts_frame_width, charts_frame_height = 325, root_height
+options_frame_width, options_frame_height = 240, root_height
+charts_frame_width, charts_frame_height = 326, root_height
 
 oval_center_x = (table_frame_width // 2) - 1
 oval_center_y = table_frame_height // 2 - 14
@@ -464,7 +471,7 @@ action_selected = tk.BooleanVar(value=False)
 depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "25"]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
 spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low"]
-combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-0.01", "mb-0.1", "mb-0"]
+combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
 possible_villains = ["None"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
@@ -511,7 +518,7 @@ combo_pool_type_dropdown = tk.OptionMenu(dropdowns_frame, combo_pool_type_var, *
 combo_pool_type_dropdown.grid(row=2, column=0, columnspan=2, pady=(5,0))
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-solutions_btns_frame.place(relx=0.5, rely=0.18, anchor="center")
+solutions_btns_frame.place(relx=0.5, rely=0.19, anchor="center")
 add_solution_buttom = tk.Button(solutions_btns_frame, text="ADD SPOT", command=add_solution)
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=(5,0))
 del_solution_buttom = tk.Button(solutions_btns_frame, text="DEL SPOT", command=delete_solution)
@@ -519,15 +526,22 @@ del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=(5,0))
 del_all_buttom = tk.Button(solutions_btns_frame, text="DEL ALL", command=delete_all_solution)
 del_all_buttom.grid(row=3, column=2, pady=(5,0))
 
-spots_listbox = tk.Listbox(root, width=39, height=15)
-spots_listbox.place(x=801, y=150)
+listbox_frame = tk.Frame(options_frame, width=options_frame_width)
+listbox_frame.place(relx=0.5, rely=0.44, anchor="center")
+spots_listbox = tk.Listbox(listbox_frame, width=39, height=15)
+spots_listbox.pack()
 
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-start_stop_btns_frame.place(relx=0.5, rely=0.7, anchor="center")
+start_stop_btns_frame.place(relx=0.51, rely=0.68, anchor="center")
 start_trainer_buttom = tk.Button(start_stop_btns_frame, text="START", command=start_trainer)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
 stop_trainer_buttom = tk.Button(start_stop_btns_frame, text="STOP", command=stop_trainer)
 stop_trainer_buttom.grid(row=0, column=1)
+
+status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg="blue")
+status_frame.place(relx=0.5, rely=0.73, anchor="center")
+status_label = tk.Label(status_frame, bg=bgd_color, text="STOPPED", foreground="white", font=("Arial", 12, "bold"))
+status_label.pack()
 
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
 charts_frame.pack(side="left")
@@ -538,9 +552,9 @@ pool_frame = tk.Frame(charts_frame, bg="black", width=325, height=336)
 pool_label = tk.Label(pool_frame, bd=0)
 pool_label.pack()
 h_key_label = tk.Label(charts_frame, text="Type <h> to toggle help")
-h_key_label.place(x=20, y=343)
+h_key_label.place(x=9, y=343)
 p_key_label = tk.Label(charts_frame, text="Type <p> to toggle pool")
-p_key_label.place(x=163, y=343)
+p_key_label.place(x=164, y=343)
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
