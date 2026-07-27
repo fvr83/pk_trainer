@@ -29,7 +29,7 @@ ranks = "AKQJT98765432"
 suits = "shdc"
 
 suit_dict = {"s": "♠", "h": "♥", "d": "♦", "c": "♣"}
-suit_color = {"s": "black", "c": "black", "h": "red", "d": "red"}
+suit_color = {"s": "black", "h": "red", "d": "red", "c": "black"}
 
 combos_matrix = [[f"{r_1}{r_2}" if i == j else f"{r_1}{r_2}s" if i < j else f"{r_2}{r_1}o" for j, r_2 in enumerate(ranks)] for i, r_1 in enumerate(ranks)]
 

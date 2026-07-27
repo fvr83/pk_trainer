@@ -1,7 +1,7 @@
 import tkinter as tk
 from math import pi, sin, cos
 import random
-from z_new_support import *
+from main_support import *
 
 
 

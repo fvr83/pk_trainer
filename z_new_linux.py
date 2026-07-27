@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageTk
-from z_new_support import *
+from main_support import *
 from Seat import Seat
 
 
