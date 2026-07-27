@@ -5,7 +5,249 @@ import json
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 from z_new_support import *
+from Seat import Seat
 
+
+
+def get_combo_pool(pool_format, spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos):
+    pool = []
+    if "tot" in pool_format:
+        percent = float(pool_format.split("-")[1])
+        percent =  percent / 100 if (100 >= percent > 1) else percent
+        goal = spot_total_ev * percent
+        # print(f"{goal = }")
+        accumulated = 0
+        for combo in combos_order:
+            if combo in prefolded_combos:
+
+                continue
+            combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
+            if (accumulated < goal and combo_ev_max >= 0) or (accumulated == goal and combo_ev_max == 0):
+                accumulated += combo_ev_max
+                pool.append(combo)
+
+        return pool
+    elif "mb" in pool_format:
+        percent = float(pool_format.split("-")[1])
+        percent =  percent / 100 if (100 >= percent > 1) else percent
+        goal = spot_max_ev * percent
+        negative_goal = -goal
+        # print(f"{goal = }")
+        # print(f"{negative_goal = }")
+        for combo in combos_order:
+            if combo in prefolded_combos:
+
+                continue
+            combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
+            if goal >= combo_ev_max >= negative_goal:
+                pool.append(combo)
+
+        return pool
+    elif "bd" in pool_format:
+        percent = float(pool_format.split("-")[1])
+        percent =  percent / 100 if (100 >= percent > 1) else percent
+        factor = float(pool_format.split("-")[2])
+        factor =  factor / 100 if (100 >= factor > 1) else factor
+        goal = spot_max_ev * percent
+        negative_goal = -(goal * factor)
+        # print(f"{goal = }")
+        # print(f"{negative_goal = }")
+        for combo in combos_order:
+            if combo in prefolded_combos:
+
+                continue
+            combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
+            if goal >= combo_ev_max >= negative_goal:
+                pool.append(combo)
+
+        return pool
+    else:
+        pool = [c for c in combos_order if c not in prefolded_combos]
+
+        return pool
+
+
+def add_solution():
+    options = [
+        depth_var.get(),
+        hero_position_var.get(),
+        spot_action_text_var.get(),
+        villain_position_var.get(),
+        combo_pool_type_var.get(),
+        folder_var.get()
+    ]
+
+    try:
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
+    except:
+        print("NOT FOUND")
+        return
+
+    item = " | ".join(options)
+
+    # Só adiciona se ainda não existir
+    if item not in spots_listbox.get(0, tk.END):
+        spots_listbox.insert(tk.END, item)
+
+
+def delete_solution():
+    selected = spots_listbox.curselection()
+
+    if not selected:
+        print("None selcted")
+        return
+
+    spots_listbox.delete(selected[0])
+
+
+def draw_pool_chart(pool: set[str]):
+    title_bar_height = 11
+
+    chart_width = (cell_size * matrix_size)
+    chart_height = chart_width + title_bar_height
+
+    chart = Image.new("RGB", (chart_width + 1, chart_height + 1), "#ffffff")
+    draw = ImageDraw.Draw(chart)
+
+    title_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=11)
+    matrix_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
+    idx_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=8)
+
+    x = 0
+    y = 0
+
+    draw.rectangle((x, y, chart_width, title_bar_height), outline="#000000")
+    title = f"COMBOS POOL ({len(pool)})"
+    text_width, text_height = get_text_boundaries(title, title_font)
+    draw.text(((chart_width - text_width) / 2, -1), text=title, font=title_font, fill="black")
+
+    for row in range(matrix_size):
+        for col in range(matrix_size):
+            x_1 = (cell_size * col)
+            y_1 = title_bar_height + (cell_size * row)
+            x_2 = x_1 + cell_size
+            y_2 = y_1 + cell_size
+            combo = combos_matrix[row][col]
+            combo_width, combo_height = get_text_boundaries(combo, matrix_font)
+            combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
+            combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
+            if combo in pool:
+                draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000", fill='#8a8a2d')
+            else:
+                draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000", fill=None)
+
+            if "Q" in combo:
+                draw.text((combo_x, combo_y + 1), combo, font=matrix_font, fill="black")
+            else:
+                draw.text((combo_x, combo_y), combo, font=matrix_font, fill="black")
+
+    return chart
+
+
+def get_right_action_precise_frequency(combo_info: dict):
+    sorted_dict = dict(sorted(combo_info.items(), key=lambda item: item[1][0]))
+    accumulated = 0
+    carry = 0.0
+    actions_range = {}
+    last_index = len(combo_info) - 1
+    for i, (action, data) in enumerate(sorted_dict.items()):
+        freq = data[0]
+        carry = ceil(carry)
+        if carry > 0:
+            carry += 1
+        if i != last_index:
+            actions_range[action] = [freq + accumulated, carry, int(freq)]
+        else:
+            actions_range[action] = [freq + accumulated, carry, 100]
+        carry = freq
+        accumulated += freq
+    rng = random.random() * 100
+    right_action = None
+    for k, v in actions_range.items():
+        if rng < v[0]:
+            right_action = k
+            break
+    if not right_action:
+        right_action = list(sorted_dict.keys())[-1]
+    final_rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
+
+    return right_action, final_rng
+
+
+def play(combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict):
+    combo = random.choice(combo_pool)
+    combo_info = combos_dict[combo][1]
+    right_action, rng = get_right_action_precise_frequency(combo_info)
+    # rng_label.config(bg=bgd_color, text=str(rng), font=("Arial", 20))
+    spot_text = mode_str + " " + spot_string
+    # spot_str_label.config(text=spot_text)
+    combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+    chart = draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos)
+    chart_tk = ImageTk.PhotoImage(chart)
+    help_label.config(image=chart_tk)
+    help_label.image = chart_tk
+    pool_chart = draw_pool_chart(combo_pool)
+    pool_chart_tk = ImageTk.PhotoImage(pool_chart)
+    pool_label.config(image=pool_chart_tk)
+    pool_label.image = pool_chart_tk
+    # pool_frame.place(x=1038, y=368)
+    action_choosed = None
+    def choose_action(i):
+        nonlocal action_choosed
+        action_choosed = spot_actions[i]
+        action_selected.set(True)
+    for i, action in enumerate(spot_actions):
+        btn = tk.Button(
+            btns_frame,
+            text=f"{i+1}: {action}",
+            command=lambda i=i: choose_action(i),
+            font=("Arial", 14, "bold")
+        )
+        btn.grid(row=0, column=i, padx=3)
+    action_selected.set(False)
+    for i in range(len(spot_actions)):
+        root.bind(
+            str(i + 1),
+            lambda event, i=i: choose_action(i)
+        )
+    root.wait_variable(action_selected)
+    # freq_point, ev_point, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text)
+
+    # return combo, freq_point, ev_point, right_action_ev
+
+
+def start_trainer():
+    global training
+    if spots_listbox.size() == 0:
+        add_solution()
+    training = True
+    result_dict = {"hands_played": 0, "right_hands_count": 0, "last_right": False, "right_streak": 0, "max_streak": 0, "imprecise_hands_count": 0, "wrong_hands_count": 0}
+    played_hands = {}
+    right_hands = {}
+    imprecise_hands = {}
+    wrong_hands = {}
+    total_freq_points = 0
+    ev_loss = 0
+    total_ev = 0
+    while training:
+        options = random.choice(spots_listbox.get(0, tk.END))
+        opt_parts = options.split(" | ")
+        options = [*opt_parts]
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
+        mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
+        hero_idx = positions.index(spot_position)
+        positions_in_order = positions[hero_idx:] + positions[:hero_idx]
+        pool = get_combo_pool(options[4], spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos)
+        combo, freq_point, ev_point, right_action_ev = play(pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+
+
+def stop_trainer():
+    global training
+    training = False
+
+
+def delete_all_solution():
+    spots_listbox.delete(0, tk.END)
 
 
 def get_possible_villains(selected=None):
@@ -66,7 +308,7 @@ def draw_table(canvas: tk. Canvas):
     canvas.create_text(562, 533, font=("Arial", 30), text=rng)
     seats: list[Seat] = []
     for i in range(8):
-        seats.append(Seat(i, canvas))
+        seats.append(Seat(i, canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y))
         seats[i].draw_seat()
 
 
@@ -79,123 +321,31 @@ def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str):
     lr_canvas.create_text(last_result_line2_x, last_result_line2_y, font=("Arial", 12, "bold"), text=line_2, fill="white")
 
 
+help_visible = False
+def toggle_help(event=None):
+    global help_visible
 
-class Seat():
-    def __init__(self, index, canvas: tk.Canvas):
-        self.canvas = canvas
-        self.index = index
-        self.position = "UTG1"
-        self.stack = "99999"
-        self.bet = "12345678"
-        self.action = ""
+    if help_visible:
+        help_frame.place_forget()
+    else:
+        help_frame.place(x=0, y=2)
 
-        if self.bet == "":
-            self.bet = 0.5 if self.position == "SB" else 1 if self.position == "BB" else self.bet
+    help_visible = not help_visible
 
-        self.cards_width = 152 if index == 0 else 64
-        self.cards_height = int((self.cards_width / 2) * 1.36)
-        self.circle_radius = 35
-        self.btn_radius = 8
+pool_visible = False
+def toggle_pool(event=None):
+    global pool_visible
 
-        self.angle = ((2 * pi) * (self.index / 8)) + (pi / 2)
-        
-        self.btn_center_x = (oval_center_x + ((oval_radius_x - self.circle_radius) * cos(self.angle)))
-        self.btn_center_y = (oval_center_y + ((oval_radius_y - self.circle_radius) * sin(self.angle)))
+    if pool_visible:
+        pool_frame.place_forget()
+    else:
+        pool_frame.place(x=0, y=368)
 
-        self.bet_center_x = (oval_center_x + ((oval_radius_x - self.circle_radius - 34) * cos(self.angle)))
-        self.bet_center_y = (oval_center_y + ((oval_radius_y - self.circle_radius - 30) * sin(self.angle)))
-        
-        self.circle_center_x = oval_center_x + (oval_radius_x * cos(self.angle))
-        self.circle_center_y = oval_center_y + (oval_radius_y * sin(self.angle))
-
-        self.cards_center_x = (oval_center_x + ((oval_radius_x + self.circle_radius + 30) * cos(self.angle)))
-        self.cards_center_y = (oval_center_y + ((oval_radius_y + self.circle_radius + 30) * sin(self.angle)))
-        self.card_x_0 = self.cards_center_x - (self.cards_width // 2)
-        self.card_y_0 = self.cards_center_y - (self.cards_height // 2)
-        self.card_x_1 = self.cards_center_x + (self.cards_width // 2)
-        self.card_y_1 = self.cards_center_y + (self.cards_height // 2)
-
-        self.position_center_x = self.circle_center_x
-        self.position_center_y = self.circle_center_y - int(self.circle_radius / 4)
-
-        self.stack_center_x = self.circle_center_x
-        self.stack_center_y = self.circle_center_y + int(self.circle_radius / 4)
+    pool_visible = not pool_visible
 
 
 
-    def draw_hero_cards(self, combo):
-        gap = 2
-        total_width = self.cards_width
-        card_width = (total_width - gap) // 2
-        card_height = int(card_width * 1.36)
-        hands_avaliable = get_combo_family(combo)
-        hand_str = random.choice(hands_avaliable)
-        x0 = self.cards_center_x - total_width / 2
-        y0 = (self.cards_center_y - card_height / 2) + 2
-        cards = [hand_str[:2], hand_str[2:]]
-        for i, (rank, suit) in enumerate(cards):
-            left = x0 + i * (card_width + gap)
-            top = y0
-            right = left + card_width
-            bottom = top + card_height
-            self.canvas.create_rectangle(left, top, right, bottom, fill="white", outline="black", width=1)
-            color = suit_color[suit]
-            self.canvas.create_text(left + 2, top - 10, anchor="nw", text=suit_dict[suit], font=("Arial", 30, "bold"), fill=color)
-            value_x_offset = 8
-            value_y_offset = 6 if rank != "Q" else 3
-            self.canvas.create_text(((left + right) / 2) + value_x_offset, ((top + bottom) / 2) + value_y_offset, text=rank, font=("Impact", 70), fill=color)
-
-
-    def draw_hidden_cards(self):
-        gap = 2
-        total_width = self.cards_width
-        card_width = (total_width - gap) // 2
-        card_height = int(card_width * 1.36)
-        x0 = self.cards_center_x - total_width / 2
-        y0 = self.cards_center_y - card_height / 2
-        for i in range(2):
-            left = x0 + i * (card_width + gap)
-            top = y0
-            right = left + card_width
-            bottom = top + card_height
-            self.canvas.create_rectangle(left, top, right, bottom, fill="white", outline="black", width=1) # White border
-            margin = max(2, card_width // 12) # card blue area
-            self.canvas.create_rectangle(left + margin + 1, top + margin + 1, right - margin + 1, bottom - margin + 1, fill="#3568D4", outline="")
-            step = max(4, card_width // 8) # simple draw on back
-            x = left + margin # vertical lines
-            while x <= right - margin:
-                self.canvas.create_line(x, top + margin, x, bottom - margin, fill="#7FAEFF" )
-                x += step
-            y = top + margin # horizontal lines
-            while y <= bottom - margin:
-                self.canvas.create_line(left + margin, y, right - margin, y, fill="#7FAEFF")
-                y += step
-
-
-    def draw_seat(self):
-        self.canvas.create_oval(
-            self.circle_center_x - self.circle_radius,
-            self.circle_center_y - self.circle_radius,
-            self.circle_center_x + self.circle_radius,
-            self.circle_center_y + self.circle_radius,
-            fill=position_color,
-            outline="black"
-        )
-        
-        if self.position == "UTG1":
-            self.canvas.create_oval(self.btn_center_x - self.btn_radius, self.btn_center_y - self.btn_radius, self.btn_center_x + self.btn_radius, self.btn_center_y + self.btn_radius, fil=btn_color)
-            self.canvas.create_text(self.btn_center_x, self.btn_center_y, font=("Arial", 10, "bold"), text="D")
-        self.canvas.create_text(self.position_center_x, self.position_center_y, font=("Arial", 18, "bold"), text=self.position)
-        self.canvas.create_text(self.stack_center_x, self.stack_center_y, font=("Arial", 10, "bold"), text=self.stack)
-        self.canvas.create_text(self.bet_center_x, self.bet_center_y, font=("Arial", 9, "bold"), text=self.bet)
-        if self.index != 0:
-            self.draw_hidden_cards()
-        else:
-            self.draw_hero_cards("KQo")
-        update_current_result_frame("✅12923(100%)  ⚠️12355(100%)  ❎12456(100%)  👍18326(100%)  🔥2 | 🏆5", "HANDS: 999 | Acc: 99% | EV loss: 12354.5/987545261")
-        update_last_combo_result_frame("🎯Allin 200 ✅Raise 2.3  | Acc/EVloss: 0.4424 / -14.35 | 👉 WRONG ANSWER 👈 | MTT ChipEV 200 | UTG1 vs_rfi UTG", "KQs | RNG: 59    Allin: [0, -0.2] | Raise 2.3: [100, 2.1] | Fold: [0, 0]", "red")
-
-
+training = False
 
 root = tk.Tk()
 root.title("Preflop")
@@ -271,8 +421,8 @@ actions_frame.pack(anchor="n", fill="both", expand=True)
 btns_frame = tk.Frame(actions_frame, width=10, height=10, bg=bgd_color)
 btns_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-btn = tk.Button(btns_frame,bd=3, relief="raised", text=f"1: Raise 2.3", font=("Arial", 14, "bold"), padx=0)
-btn.grid(row=0, column=0, padx=3)
+# btn = tk.Button(btns_frame,bd=3, relief="raised", text=f"1: Raise 2.3", font=("Arial", 14, "bold"), padx=0)
+# btn.grid(row=0, column=0, padx=3)
 
 last_result_frame = tk.Frame(main_frame, width=last_result_frame_width, height=last_result_frame_height, bg="red")
 last_result_frame.pack(side="bottom", fill="both")
@@ -284,15 +434,57 @@ options_frame.pack(side="left")
 options_frame.pack_propagate(False)
 
 dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
-dropdowns_frame.pack(fill="both", expand=True)
+dropdowns_frame.place(relx=0.5, rely=0.08, anchor="center")
 depth_dropdown = tk.OptionMenu(dropdowns_frame, depth_var, *depths)
-depth_dropdown.grid(row=0, column=0)
-hero_position_dropdown = tk.OptionMenu(root, hero_position_var, *positions, command=get_possible_villains)
-hero_position_dropdown.place(x=900, y=32)
+depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=(0,5))
+hero_position_dropdown = tk.OptionMenu(dropdowns_frame, hero_position_var, *positions, command=get_possible_villains)
+hero_position_dropdown.grid(row=0, column=1, sticky="w", pady=(0,5))
+spot_action_text_dropdown = tk.OptionMenu(dropdowns_frame, spot_action_text_var, *spot_actions_text, command=get_possible_villains)
+spot_action_text_dropdown.grid(row=1, column=0, sticky="e", padx=(0,5))
+villain_position_dropdown = tk.OptionMenu(dropdowns_frame, villain_position_var, *possible_villains)
+villain_position_dropdown.grid(row=1, column=1, sticky="w")
+combo_pool_type_dropdown = tk.OptionMenu(dropdowns_frame, combo_pool_type_var, *combo_pool_types)
+combo_pool_type_dropdown.grid(row=2, column=0, columnspan=2, pady=(5,0))
+
+solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
+solutions_btns_frame.place(relx=0.5, rely=0.18, anchor="center")
+add_solution_buttom = tk.Button(solutions_btns_frame, text="ADD SPOT", command=add_solution)
+add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=(5,0))
+del_solution_buttom = tk.Button(solutions_btns_frame, text="DEL SPOT", command=delete_solution)
+del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=(5,0))
+del_all_buttom = tk.Button(solutions_btns_frame, text="DEL ALL", command=delete_all_solution)
+del_all_buttom.grid(row=3, column=2, pady=(5,0))
+
+spots_listbox = tk.Listbox(root, width=39, height=15)
+spots_listbox.place(x=801, y=150)
+
+start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=btn_color)
+start_stop_btns_frame.place(relx=0.5, rely=0.6, anchor="center")
+start_trainer_buttom = tk.Button(start_stop_btns_frame, text="START", command=start_trainer)
+start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
+stop_trainer_buttom = tk.Button(start_stop_btns_frame, text="STOP", command=stop_trainer)
+stop_trainer_buttom.grid(row=0, column=1)
 
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=table_color)
 charts_frame.pack(side="left")
+help_frame = tk.Frame(charts_frame, bg="black", width=325, height=336)
+help_label = tk.Label(help_frame, bd=0, bg="black")
+help_label.pack()
+pool_frame = tk.Frame(charts_frame, bg="black", width=325, height=336)
+pool_label = tk.Label(pool_frame, bd=0)
+pool_label.pack()
+h_key_label = tk.Label(charts_frame, text="Type <h> to toggle help")
+h_key_label.place(x=20, y=343)
+p_key_label = tk.Label(charts_frame, text="Type <p> to toggle pool")
+p_key_label.place(x=163, y=343)
 
 draw_table(table_canvas)
+update_current_result_frame("✅12923(100%)  ⚠️12355(100%)  ❎12456(100%)  👍18326(100%)  🔥2 | 🏆5", "HANDS: 999 | Acc: 99% | EV loss: 12354.5/987545261")
+update_last_combo_result_frame("🎯Allin 200 ✅Raise 2.3  | Acc/EVloss: 0.4424 / -14.35 | 👉 WRONG ANSWER 👈 | MTT ChipEV 200 | UTG1 vs_rfi UTG", "KQs | RNG: 59    Allin: [0, -0.2] | Raise 2.3: [100, 2.1] | Fold: [0, 0]", "red")
+
+root.bind("h", toggle_help)
+root.bind("p", toggle_pool)
+h_key_label.bind("<Button-1>", toggle_help)
+p_key_label.bind("<Button-1>", toggle_pool)
 
 root.mainloop()

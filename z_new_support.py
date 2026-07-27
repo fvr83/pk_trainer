@@ -1,3 +1,7 @@
+from pathlib import Path
+import json
+from PIL import Image, ImageDraw, ImageFont
+
 equity_vs = {
     0: {'AA': 0.0, 'KK': 0.0, 'QQ': 0.0, 'JJ': 0.0, 'TT': 0.0, '99': 0.0, '88': 0.0, '77': 0.0, '66': 0.0, '55': 0.0, '44': 0.0, '33': 0.0, '22': 0.0, 'AKs': 0.0, 'AQs': 0.0, 'AJs': 0.0, 'ATs': 0.0, 'A9s': 0.0, 'A8s': 0.0, 'A7s': 0.0, 'A6s': 0.0, 'A5s': 0.0, 'A4s': 0.0, 'A3s': 0.0, 'A2s': 0.0, 'KQs': 0.0, 'KJs': 0.0, 'KTs': 0.0, 'K9s': 0.0, 'K8s': 0.0, 'K7s': 0.0, 'K6s': 0.0, 'K5s': 0.0, 'K4s': 0.0, 'K3s': 0.0, 'K2s': 0.0, 'QJs': 0.0, 'QTs': 0.0, 'Q9s': 0.0, 'Q8s': 0.0, 'Q7s': 0.0, 'Q6s': 0.0, 'Q5s': 0.0, 'Q4s': 0.0, 'Q3s': 0.0, 'Q2s': 0.0, 'JTs': 0.0, 'J9s': 0.0, 'J8s': 0.0, 'J7s': 0.0, 'J6s': 0.0, 'J5s': 0.0, 'J4s': 0.0, 'J3s': 0.0, 'J2s': 0.0, 'T9s': 0.0, 'T8s': 0.0, 'T7s': 0.0, 'T6s': 0.0, 'T5s': 0.0, 'T4s': 0.0, 'T3s': 0.0, 'T2s': 0.0, '98s': 0.0, '97s': 0.0, '96s': 0.0, '95s': 0.0, '94s': 0.0, '93s': 0.0, '92s': 0.0, '87s': 0.0, '86s': 0.0, '85s': 0.0, '84s': 0.0, '83s': 0.0, '82s': 0.0, '76s': 0.0, '75s': 0.0, '74s': 0.0, '73s': 0.0, '72s': 0.0, '65s': 0.0, '64s': 0.0, '63s': 0.0, '62s': 0.0, '54s': 0.0, '53s': 0.0, '52s': 0.0, '43s': 0.0, '42s': 0.0, '32s': 0.0, 'AKo': 0.0, 'AQo': 0.0, 'AJo': 0.0, 'ATo': 0.0, 'A9o': 0.0, 'A8o': 0.0, 'A7o': 0.0, 'A6o': 0.0, 'A5o': 0.0, 'A4o': 0.0, 'A3o': 0.0, 'A2o': 0.0, 'KQo': 0.0, 'KJo': 0.0, 'KTo': 0.0, 'K9o': 0.0, 'K8o': 0.0, 'K7o': 0.0, 'K6o': 0.0, 'K5o': 0.0, 'K4o': 0.0, 'K3o': 0.0, 'K2o': 0.0, 'QJo': 0.0, 'QTo': 0.0, 'Q9o': 0.0, 'Q8o': 0.0, 'Q7o': 0.0, 'Q6o': 0.0, 'Q5o': 0.0, 'Q4o': 0.0, 'Q3o': 0.0, 'Q2o': 0.0, 'JTo': 0.0, 'J9o': 0.0, 'J8o': 0.0, 'J7o': 0.0, 'J6o': 0.0, 'J5o': 0.0, 'J4o': 0.0, 'J3o': 0.0, 'J2o': 0.0, 'T9o': 0.0, 'T8o': 0.0, 'T7o': 0.0, 'T6o': 0.0, 'T5o': 0.0, 'T4o': 0.0, 'T3o': 0.0, 'T2o': 0.0, '98o': 0.0, '97o': 0.0, '96o': 0.0, '95o': 0.0, '94o': 0.0, '93o': 0.0, '92o': 0.0, '87o': 0.0, '86o': 0.0, '85o': 0.0, '84o': 0.0, '83o': 0.0, '82o': 0.0, '76o': 0.0, '75o': 0.0, '74o': 0.0, '73o': 0.0, '72o': 0.0, '65o': 0.0, '64o': 0.0, '63o': 0.0, '62o': 0.0, '54o': 0.0, '53o': 0.0, '52o': 0.0, '43o': 0.0, '42o': 0.0, '32o': 0.0},
     1: {'AA': 85.27, 'KK': 82.37, 'QQ': 79.91, 'JJ': 77.48, 'TT': 74.97, '99': 71.99, '88': 69.26, '77': 66.25, '66': 63.27, '55': 60.23, '44': 57.03, '33': 53.78, '22': 50.38, 'AKs': 66.92, 'AQs': 66.17, 'AJs': 65.41, 'ATs': 64.61, 'A9s': 62.78, 'A8s': 61.93, 'A7s': 61.07, 'A6s': 59.86, 'A5s': 59.8, 'A4s': 59.03, 'A3s': 58.19, 'A2s': 57.37, 'KQs': 63.3, 'KJs': 62.56, 'KTs': 61.83, 'K9s': 60.02, 'K8s': 58.32, 'K7s': 57.5, 'K6s': 56.67, 'K5s': 55.83, 'K4s': 54.87, 'K3s': 54.02, 'K2s': 53.22, 'QJs': 60.29, 'QTs': 59.5, 'Q9s': 57.68, 'Q8s': 56.02, 'Q7s': 54.32, 'Q6s': 53.61, 'Q5s': 52.61, 'Q4s': 51.92, 'Q3s': 51.0, 'Q2s': 50.21, 'JTs': 57.52, 'J9s': 55.66, 'J8s': 54.01, 'J7s': 52.35, 'J6s': 50.66, 'J5s': 50.02, 'J4s': 49.11, 'J3s': 48.2, 'J2s': 47.39, 'T9s': 54.06, 'T8s': 52.26, 'T7s': 50.78, 'T6s': 48.95, 'T5s': 47.19, 'T4s': 46.58, 'T3s': 45.7, 'T2s': 44.81, '98s': 50.87, '97s': 49.16, '96s': 47.38, '95s': 45.75, '94s': 43.84, '93s': 43.29, '92s': 42.31, '87s': 47.94, '86s': 46.2, '85s': 44.55, '84s': 42.62, '83s': 40.85, '82s': 40.24, '76s': 45.46, '75s': 43.75, '74s': 41.93, '73s': 40.04, '72s': 38.15, '65s': 43.14, '64s': 41.33, '63s': 39.51, '62s': 37.64, '54s': 41.51, '53s': 39.74, '52s': 37.87, '43s': 38.58, '42s': 36.89, '32s': 35.96, 'AKo': 65.25, 'AQo': 64.41, 'AJo': 63.62, 'ATo': 62.65, 'A9o': 60.84, 'A8o': 59.88, 'A7o': 58.89, 'A6o': 57.68, 'A5o': 57.7, 'A4o': 56.69, 'A3o': 55.93, 'A2o': 54.94, 'KQo': 61.55, 'KJo': 60.52, 'KTo': 59.71, 'K9o': 57.81, 'K8o': 56.05, 'K7o': 55.25, 'K6o': 54.26, 'K5o': 53.35, 'K4o': 52.27, 'K3o': 51.39, 'K2o': 50.44, 'QJo': 58.15, 'QTo': 57.28, 'Q9o': 55.31, 'Q8o': 53.7, 'Q7o': 51.76, 'Q6o': 51.09, 'Q5o': 50.13, 'Q4o': 49.14, 'Q3o': 48.21, 'Q2o': 47.23, 'JTo': 55.21, 'J9o': 53.26, 'J8o': 51.41, 'J7o': 49.71, 'J6o': 47.95, 'J5o': 47.1, 'J4o': 46.15, 'J3o': 45.23, 'J2o': 44.27, 'T9o': 51.59, 'T8o': 49.73, 'T7o': 48.0, 'T6o': 46.1, 'T5o': 44.22, 'T4o': 43.55, 'T3o': 42.49, 'T2o': 41.63, '98o': 48.13, '97o': 46.27, '96o': 44.47, '95o': 42.62, '94o': 40.59, '93o': 40.05, '92o': 39.12, '87o': 45.04, '86o': 43.22, '85o': 41.37, '84o': 39.47, '83o': 37.51, '82o': 36.8, '76o': 42.32, '75o': 40.48, '74o': 38.56, '73o': 36.68, '72o': 34.63, '65o': 39.92, '64o': 37.9, '63o': 36.09, '62o': 34.08, '54o': 38.21, '53o': 36.26, '52o': 34.3, '43o': 35.09, '42o': 33.28, '32o': 32.38},
@@ -45,3 +49,438 @@ color_data = { # call color 20% S in HSV BB+BU+CO R -10% V in HSV
     "SB": ['#FFFFFF', '#cce7ff', '#0080ff', '#0060bf', '#004080', '#002040', '#ffff00'],
     "BB": ['#FFFFFF', '#ccffff', '#00e6e6', '#00a6a6', '#006666', '#002626', '#ffff00'],
 }
+
+
+
+def sort_key(combo: str, combo_results: list[str, list[dict[str, float]]], spot_non_fold_most_frequent_actions: list[str], vs: int) -> tuple[float]:
+    result = []
+    if not combo_results:
+        result.append(-1000)
+        result.append(equity_vs[vs][combo])
+
+        return result
+    actions_dict = combo_results[1]
+    for spot_action in spot_non_fold_most_frequent_actions:
+        result.append(actions_dict[spot_action][1])
+        result.append(actions_dict[spot_action][0])
+    result.append(equity_vs[vs][combo])
+    
+    return result
+
+
+def normalize_float(num: float, decimals: int = 2) -> float | int:
+    try:
+        num = float(num)
+    except:
+        print(f'NUM_var must be a integer or float {num}')
+
+        return 0
+    if num.is_integer():
+
+        return int(num)
+    
+    return round(num, decimals)
+
+
+def get_data(depth, spot_position, spot, villain_position, folder):
+   
+    
+    for path in Path(folder).iterdir():
+        if not path.is_file():
+
+            continue
+        file_extension = str(path).removeprefix(f"{folder}\\")
+        file_name = file_extension.removesuffix(".json")
+        if f"_{depth}bb_" not in file_name:
+
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            data_temp = json.load(f)
+        if villain_position and villain_position != "None":
+            data = data_temp[spot_position][spot][villain_position]
+        else:
+
+            data = data_temp[spot_position][spot]
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = data
+
+    return mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict
+
+
+def parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict):
+    spot_sequency = {}
+    for index, positon_action_tuple in enumerate(positions_actions):
+        position, immediate_stack, action_choosed, avaliable_actions = positon_action_tuple
+        if action_choosed not in ["N/A", "Fold"]:
+            spot_sequency[index + 1] = {position: action_choosed}
+    spot_position = None
+    spot_string = ""
+    vs = None
+    positions_acted = []
+    mode_str = ""
+    try:
+        game_mode, chip_mode, depth = mode_depth
+        mode_str = f"{game_mode} {chip_mode} {depth}"
+    except:
+        game_mode, chip_mode, depth, limp = mode_depth
+        mode_str = f"{game_mode} {chip_mode} {depth} {limp}"
+
+    for i, (k, v) in enumerate(spot_sequency.items()):
+        for position_str, action in v.items():
+            position = position_str.split(" ")[0]
+            if i == 0 and action == "spot":
+                spot_string += f"| {position} RFI |"
+                spot_position = position
+                vs = vs_dict[position]
+
+                break
+            if action == "spot":
+                spot_position = position
+                spot_string = f"| {position} vs |" + spot_string
+                if spot_position in positions_acted:
+                    vs = len([p for p in positions_acted if p != spot_position])
+                else:
+                    vs = len(positions_acted) if spot_position == "BB" else len(positions_acted) + vs_dict[spot_position]
+            else:
+                spot_string += f" {position} {action} |"
+                positions_acted.append(position)
+    spot_actions = [action_tuple[0].strip() for action_tuple in actions_frequencies]
+    spot_most_frequent_actions = [action_tuple[0].strip() for action_tuple in sorted(actions_frequencies, key=lambda x: x[1], reverse=True)]
+    spot_non_fold_most_frequent_actions = [action for action in spot_most_frequent_actions if action != "Fold"]
+    sorted_combos_dict = dict(sorted(combos_dict.items(), key=lambda item: sort_key(item[0], item[1], spot_non_fold_most_frequent_actions, vs), reverse=True))
+    combos_order = list(sorted_combos_dict.keys())
+    spot_total_ev = 0
+    spot_max_ev = 0
+    max_ev_combo = ""
+    prefolded_combos = []
+    for combo, data in sorted_combos_dict.items():
+        if not data:
+            prefolded_combos.append(combo)
+        else:
+            combo_ev_max = max(normalize_float(v[1]) for k, v in data[1].items() if k != "Fold")
+            if combo_ev_max >= 0:
+                if combo_ev_max > spot_max_ev:
+                    spot_max_ev = combo_ev_max
+                    max_ev_combo = combo
+                spot_total_ev += combo_ev_max
+    spot_total_ev = round(spot_total_ev, 2)
+
+    return mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev
+
+
+def parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict):
+    try:
+        game_mode, chip_mode, depth = mode_depth
+    except:
+        game_mode, chip_mode, depth, limp = mode_depth
+    spot_sequency = {}
+    original_spot_position = None
+    spot_raise_actions = []
+    for index, positon_action_tuple in enumerate(positions_actions):
+        position, immediate_stack, action_choosed, avaliable_actions = positon_action_tuple
+
+        if action_choosed == "spot":
+            original_spot_position = position
+            spot_raise_actions = [action for action in avaliable_actions if "Raise" in action]
+        if action_choosed not in ["N/A", "Fold"]:
+            spot_sequency[index + 1] = {position: action_choosed}
+
+            if "Raise" in action_choosed:
+                raise_actions = [action for action in avaliable_actions if "Raise"  in action]
+                raise_actions = raise_actions[::-1]
+                index = raise_actions.index(action_choosed)
+    spot_actions_text_colors = [[f"{depth:>3}", '#000000', '#ffffff']]
+    spot_position = position_name_change[original_spot_position]
+    for index, data in enumerate(spot_sequency.values()):
+        for position, action in data.items():
+            if action == "spot":
+                text_color = "#ffffff" if position in ["LJ", "SB"] else "#000000"
+                bg_color = color_data[original_spot_position][2]
+                if index == 0:
+                    action_string = f"{spot_position} oR"
+                    spot_actions_text_colors.append([action_string, text_color, bg_color])
+                else:
+                    action_string = f"{spot_position} vs"
+                    spot_actions_text_colors.insert(1, [action_string, text_color, bg_color])
+            else:
+                if action.startswith("R"):
+                    position_actions_tuple = [next(t for t in positions_actions if t[0] == position)][0]
+                    actions_in_tuple = position_actions_tuple[3]
+                    position_raise_actions = []
+                    for act in actions_in_tuple:
+                        if act.startswith("R"):
+                            position_raise_actions.append(act)
+                    action_name_part, action_size_part = action.split(" ")
+                    raise_idx = position_raise_actions[::-1].index(action)
+                    bg_color = color_data[position][2 + raise_idx]
+                    text_color = "#ffffff" if position in ["LJ", "SB"] or raise_idx > 1 else "#000000"
+                    action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}{action_size_part}"
+                    spot_actions_text_colors.append([action_string, text_color, bg_color])
+                elif action.startswith("C"):
+                    text_color = "#000000"
+                    bg_color = color_data[original_spot_position][1]
+                    action_string = f"{position_name_change[position]} {action_name_change[action]}"
+                    spot_actions_text_colors.append([action_string, text_color, bg_color])
+                elif action.startswith("A"):
+                    action_name_part, action_size_part = action.split(" ")
+                    text_color = "#000000"
+                    bg_color = color_data[original_spot_position][6]
+                    action_string = f"{position_name_change[position]} {action_name_change[action_name_part]}"
+                    spot_actions_text_colors.append([action_string, text_color, bg_color])
+    spot_actions_text_colors.append(["*", "#ffffff", "#000000"])
+    try:
+        min_action_freq_tuple = min((action for action in actions_frequencies if action[0] != "Fold" and action[1] > 1), key=lambda x: x[1])
+    except:
+        min_action_freq_tuple = min((action for action in actions_frequencies if action[0] != "Fold"), key=lambda x: x[1])
+    min_action_freq  = min_action_freq_tuple[1]
+    sorted_actions_frequencies = sorted(actions_frequencies, key= lambda x: x[1], reverse=True)
+    spot_most_frequent_actions = []
+    spot_most_frequent_nonfold_actions = []
+    for action_tuple in sorted_actions_frequencies: 
+        action, freq, num_combos, rgb = action_tuple
+        if action != "Fold":
+            spot_most_frequent_nonfold_actions.append(action)
+        spot_most_frequent_actions.append(action)
+        if freq > 0:
+            if action.startswith("R"):
+                action_name_part, action_size_part = action.split(" ")
+                raise_idx = spot_raise_actions[::-1].index(action)
+                bg_color = color_data[position][2 + raise_idx]
+                text_color = "#ffffff" if position in ["LJ", "SB"] or raise_idx > 1 else "#000000"
+                action_string = f"{action_name_change[action_name_part]}{action_size_part}: {freq}"
+                percent = freq / min_action_freq
+                spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
+            elif action.startswith("C"):
+                text_color = "#000000"
+                bg_color = color_data[original_spot_position][1]
+                action_string = f"{action_name_change[action]}: {freq}"
+                percent = freq / min_action_freq
+                spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
+            elif action.startswith("A"):
+                action_name_part, action_size_part = action.split(" ")
+                text_color = "#000000"
+                bg_color = color_data[original_spot_position][6]
+                action_string = f"{action_name_change[action_name_part]}: {freq}"
+                percent = freq / min_action_freq
+                spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
+            elif action.startswith("F"):
+                text_color = "#000000"
+                bg_color = "#ffffff"
+                action_string = f"{action_name_change[action]}: {freq}"
+                percent = freq / min_action_freq
+                spot_actions_text_colors.append([action_string, text_color, bg_color, percent])
+    vs = len(set(v for d in spot_sequency.values() for v in d.keys() if original_spot_position not in v))
+    vs = vs_dict[original_spot_position] if vs == 0 else vs
+    sorted_combos = dict(sorted(combos_dict.items(), key=lambda item: sort_key(item[0], item[1], spot_most_frequent_nonfold_actions, vs), reverse=True))
+    combos_order = list(dict(sorted_combos).keys())
+    combo_colors_info_dict = {}
+    fold_combos = []
+    total_bars_to_paint = int(cell_inner_size / paint_bar_size)
+    share = 100 / total_bars_to_paint
+    for combo, data in combos_dict.items():
+        if not data:
+            continue
+        ev_max_label, actions_dict = data
+        combo_most_frequent_actions = sorted(actions_dict, key=lambda action: actions_dict[action][0], reverse=True)
+        combo_most_frequent_non_fold_actions = sorted((action for action in actions_dict if action != "Fold"), key=lambda action: actions_dict[action][0], reverse=True)
+        colors_info = []
+        has_play_freq = False
+        has_ev = False
+        remaining_bars_to_paint = int(cell_inner_size / paint_bar_size)
+        for action in combo_most_frequent_actions:
+            freq = actions_dict[action][0]
+            ev = actions_dict[action][1]
+            if freq > 0:
+                if action.startswith("R"):
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    raise_idx = spot_raise_actions[::-1].index(action)
+                    color = color_data[position][2 + raise_idx]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("C"):
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    color = color_data[position][1]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("A"):
+                    if ev > 0: has_ev = True
+                    has_play_freq = True
+                    color = color_data[position][6]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+                elif action.startswith("F"):
+                    color = color_data[position][0]
+                    bars_to_paint = int((freq * total_bars_to_paint) / 100)
+                    remaining_bars_to_paint -= bars_to_paint
+                    spread = ((bars_to_paint + 1) * share) - freq
+                    colors_info.append([color, bars_to_paint, spread])
+        while remaining_bars_to_paint:
+            choosed = min(colors_info, key=lambda x: x[2])
+            choosed[1] += 1
+            choosed[2] = 100
+            remaining_bars_to_paint -= 1
+        
+        if not has_play_freq:
+            fold_combos.append(combo)
+
+        fold_tiles = 0
+        for color_paint_list in colors_info:
+            if color_paint_list[0] == "#FFFFFF":
+                fold_tiles = color_paint_list[1]
+                break
+        
+        need_info = None
+        if has_play_freq and fold_tiles == total_bars_to_paint:
+            act = combo_most_frequent_non_fold_actions[0]
+            if act.startswith("R"):
+                act_name, act_size = act.split(" ")
+                need_info = f"{act_name[0]}{normalize_float(act_size, 1)}"
+            else:
+                need_info = f"{act[0]}"
+
+        colors_info = [ls for ls in colors_info if ls[1] > 0]
+
+        combo_colors_info_dict[combo] = colors_info, (need_info, has_play_freq, has_ev)
+    
+    fold_combos_final = [c for c in combos_order if c in fold_combos]
+
+    return combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos_final
+
+
+def draw_red_black_line(x: int, y: int, img: Image):
+    draw = ImageDraw.Draw(img)
+    for i in range(24):
+        if i % 2 == 0:
+            draw.point((x, y + i), "#ff0000")
+        else:
+            draw.point((x, y + i), "#000000")
+
+
+def draw_yellow_black_line(x: int, y: int, img: Image):
+    draw = ImageDraw.Draw(img)
+    for i in range(24):
+        if i % 2 == 0:
+            draw.point((x, y + i), "#ffff00")
+        else:
+            draw.point((x, y + i), "#000000")
+
+
+def get_text_boundaries(text: str, font: tuple) -> tuple[int]:
+    text_len = len(text)
+    img_size = text_len * 11
+    img = Image.new("RGB", (img_size, int(img_size / 3)), "#ffffff")
+    draw = ImageDraw.Draw(img)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    width = bbox[2] - bbox[0]
+    height = bbox[3] - bbox[1]
+
+    return width, height
+
+
+def draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos):
+    title_bar_height = 11
+
+    chart_width = (cell_size * matrix_size)
+    chart_height = chart_width + title_bar_height
+
+    chart = Image.new("RGB", (chart_width + 1, chart_height + 1), "#ffffff")
+    draw = ImageDraw.Draw(chart)
+
+    title_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=11)
+    matrix_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", size=14)
+    idx_font = ImageFont.truetype("ROBOTOCONDENSED-SEMIBOLD.ttf", size=8)
+
+    x = 0
+    y = 0
+    
+    x_i = 0
+    for part in spot_actions_text_colors:
+        text = part[0]
+        text_color = part[1]
+        bg_color =  part[2]
+        percent = None
+        try:
+            percent = part[3]
+        except:
+            pass
+        text_width, text_height = get_text_boundaries(text, title_font)
+        draw.rectangle((x_i + 2, y - 1, (x_i + 2) + text_width, (y - 1) + title_bar_height), fill=bg_color, outline=None)
+        draw.text((x_i + 2, y - 1), text, font=title_font, fill=text_color)
+        if percent:
+            x_i += text_width + 1
+            percent = str(round(percent))
+            percent_width, percent_height = get_text_boundaries(percent, title_font)
+            draw.rectangle((x_i + 2, y - 1, (x_i + 2) + percent_width, (y - 1) + title_bar_height), fill="#5f6661", outline=None)
+            draw.text((x_i + 2, y - 1), percent, font=title_font, fill="#ffffff")
+            x_i += percent_width + 2
+        else:
+            x_i += text_width + 2
+    draw.rectangle((x, y, chart_width, title_bar_height), outline="#000000")
+    for row in range(matrix_size):
+        for col in range(matrix_size):
+            x_1 = (cell_size * col)
+            y_1 = title_bar_height + (cell_size * row)
+            x_2 = x_1 + cell_size
+            y_2 = y_1 + cell_size
+            combo = combos_matrix[row][col]
+            x_i = x_1
+            need_info, has_play_freq, has_ev = None, False, False
+            try:
+                colors_parts = combo_colors_info_dict[combo]
+                for part in colors_parts:
+                    if isinstance(part, list):
+                        for i, part_rgb in enumerate(part):
+                            color = part_rgb[0]
+                            pixels_to_paint = part_rgb[1] * paint_bar_size
+                            draw.rectangle((x_i + 1, y_1, x_i + pixels_to_paint, y_2), fill=color, outline=None)
+                            colors_sequency_size = len(colors_parts[0])
+                            if color == "#FFFFFF":
+                                if i == 0 and colors_sequency_size > 1:
+                                    draw_red_black_line(x_i + pixels_to_paint, y_1 + 1, chart)
+                                if i == colors_sequency_size - 1 and colors_sequency_size > 1:
+                                    draw_yellow_black_line(x_i + 1, y_1 + 1, chart)
+                                if 0 < i < colors_sequency_size - 1:
+                                    draw_red_black_line(x_i + pixels_to_paint, y_1 + 1, chart)
+                                    draw_yellow_black_line(x_i + 1, y_1 + 1, chart)
+                            x_i += pixels_to_paint
+
+                    elif isinstance(part, tuple):
+                        need_info = part[0]
+                        has_play_freq = part[1]
+                        has_ev = part[2]
+            except:
+                pass
+            
+            combo_text_color = "#000000" if has_ev else "#737373" if has_play_freq else "#d9d9d9"
+
+            if need_info:
+                need_info_width, need_info_height = get_text_boundaries(need_info, idx_font)
+                draw.text((x_1 + 1 + (cell_size - need_info_width) // 2, y_1 - 1), font=idx_font, text=need_info, fill=combo_text_color)
+
+            combo_rank = str(combos_order.index(combo) + 1)
+            combo_rank_width, combo_rank_height = get_text_boundaries(combo_rank, idx_font)
+            combo_rank_color = "#a6a6a6" if combo_text_color == "#d9d9d9" else combo_text_color
+            draw.text((x_1 + (cell_size - combo_rank_width), y_1 - 2 + (cell_size - 6)), combo_rank, fill=combo_rank_color, font=idx_font)
+
+            if combo in fold_combos:
+                folded_combo_rank = str(fold_combos.index(combo) + 1)
+                draw.text((x_1 + 1, y_1 - 1), folded_combo_rank, fill="#000000", font=idx_font)
+
+            combo_width, combo_height = get_text_boundaries(combo, matrix_font)
+            combo_x = x_1 + ((cell_size - combo_width) // 2) + 1
+            combo_y = y_1 + ((cell_size - combo_height) // 2) - 2
+            if "Q" in combo:
+                draw.text((combo_x, combo_y + 1), combo, font=matrix_font, fill=combo_text_color)
+            else:
+                draw.text((combo_x, combo_y), combo, font=matrix_font, fill=combo_text_color)
+
+            draw.rectangle((x_1, y_1, x_2, y_2), outline="#000000")
+
+    return chart
