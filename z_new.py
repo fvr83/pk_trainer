@@ -454,7 +454,7 @@ btn_color = "#F39508"
 position_color = "#E9E9E9"
 
 folder_var = tk.StringVar(root, value="json_results")
-depth_var = tk.StringVar(root, value="200")
+depth_var = tk.StringVar(root, value="100")
 hero_position_var = tk.StringVar(root, value="UTG")
 spot_action_text_var = tk.StringVar(root, value="rfi")
 villain_position_var = tk.StringVar(root, value="None")
