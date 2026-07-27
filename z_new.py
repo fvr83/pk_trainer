@@ -542,10 +542,6 @@ h_key_label.place(x=20, y=343)
 p_key_label = tk.Label(charts_frame, text="Type <p> to toggle pool")
 p_key_label.place(x=163, y=343)
 
-# draw_table(table_canvas, positions)
-# update_current_result_frame("✅12923(100%)  ⚠️12355(100%)  ❎12456(100%)  👍18326(100%)  🔥2 | 🏆5", "HANDS: 999 | Acc: 99% | EV loss: 12354.5/987545261")
-# update_last_combo_result_frame("🎯Allin 200 ✅Raise 2.3  | Acc/EVloss: 0.4424 / -14.35 | 👉 WRONG ANSWER 👈 | MTT ChipEV 200 | UTG1 vs_rfi UTG", "KQs | RNG: 59    Allin: [0, -0.2] | Raise 2.3: [100, 2.1] | Fold: [0, 0]", "red", "black")
-
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
 h_key_label.bind("<Button-1>", toggle_help)
