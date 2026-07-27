@@ -18,7 +18,7 @@ for path in Path(folder).iterdir():
         # print(file_name)
         content = f.read()
         # print(content)
-    if "_40bb" not in file_name:
+    if "_25bb" not in file_name:
         
         continue
     limp = None
@@ -163,7 +163,7 @@ for path in Path(folder).iterdir():
         # print(f"{villain_position = }")
         # print("-" * 20)
     
-    destination_folder = "json_results_2"
+    destination_folder = "json_results"
     Path(destination_folder).mkdir(parents=True, exist_ok=True)
     with open(f"{destination_folder}\\{file_name}.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=4)

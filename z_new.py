@@ -461,7 +461,7 @@ villain_position_var = tk.StringVar(root, value="None")
 combo_pool_type_var = tk.StringVar(root, value="bd-0.01-0.7")
 action_selected = tk.BooleanVar(value=False)
 
-depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40"]
+depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "25"]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
 spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low"]
 combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-0.01", "mb-0.1", "mb-0"]
