@@ -728,7 +728,7 @@ def main() -> None:
     # ALL_EV & 0EV: "tot-100"
     # 0EV: "mb-0"
     # THIN_BORDER: "bd-0.01-0.7"
-    options = ["json_results_2", "60", "UTG1", "vs_rfi", "UTG", "bd-0.01-0.7"]
+    options = ["json_results_2", "50", "BTN", "rfi", None, "bd-0.01-0.7"]
 
     mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(*options[:-1])
     mode_str, spot_string, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)

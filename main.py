@@ -4,7 +4,6 @@ from pathlib import Path
 import json
 import random
 from PIL import Image, ImageDraw, ImageFont, ImageTk
-import time
 
 
 equity_vs = {
@@ -62,19 +61,20 @@ def get_combo_family(combo):
         return 0
     if combo[0] == combo[1]:
 
-        return set(f"{combo[0]}{s_1}{combo[1]}{s_2}" for i, s_1 in enumerate(suits) for j, s_2 in enumerate(suits) if i > j)
+        return list(f"{combo[0]}{s_1}{combo[1]}{s_2}" for i, s_1 in enumerate(suits) for j, s_2 in enumerate(suits) if i > j)
     elif combo[2] == "o":
 
-        return set(f"{combo[0]}{s_1}{combo[1]}{s_2}" for i, s_1 in enumerate(suits) for j, s_2 in enumerate(suits) if i != j)
+        return list(f"{combo[0]}{s_1}{combo[1]}{s_2}" for i, s_1 in enumerate(suits) for j, s_2 in enumerate(suits) if i != j)
     elif combo[2] == "s":
 
-        return set(f"{combo[0]}{s}{combo[1]}{s}" for s in suits)
+        return list(f"{combo[0]}{s}{combo[1]}{s}" for s in suits)
 
 
 def draw_cards(combo):
-    rank_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", 36)
-    suit_font = ImageFont.truetype("arial.ttf", 20)
-    hand_str = get_combo_family(combo).pop()
+    rank_font = ImageFont.truetype("ROBOTOCONDENSED-BLACK.ttf", 50)
+    suit_font = ImageFont.truetype("arial.ttf", 24)
+    hands_avaliable = get_combo_family(combo)
+    hand_str = random.choice(hands_avaliable)
     card_1_str = hand_str[:2]
     rank_1 = card_1_str[0]
     rank_1_width, rank_1_height = get_text_boundaries(rank_1, rank_font)
@@ -88,14 +88,17 @@ def draw_cards(combo):
     suit_2_width, suit_2_height = get_text_boundaries(suit_2, suit_font)
     card_2_color = "#9C1818" if suit_2 in "hd" else "black"
     gap = 2
+    card_1_x = 0
+    card_2_x = (cards_width / 2) + (gap / 2)
+    card_y = 0
     cards_img = Image.new("RGB", (cards_width + 1, cards_height + 1), "#515152")
     draw = ImageDraw.Draw(cards_img)
-    draw.rounded_rectangle((0, 0, (cards_width / 2) - (gap / 2), cards_height - 1), 4, "#ffffff", "#4B4848")
-    draw.text(((cards_width - gap - rank_1_width - 10) / 4, (cards_height - rank_1_height - 5) / 2), rank_1, card_1_color, font=rank_font)
-    draw.text(((cards_width - gap - suit_1_width - 30) / 16, (cards_height - suit_1_height - 70) / 8), suit_dict[suit_1], card_1_color, font=suit_font)
+    draw.rounded_rectangle((card_1_x, card_y, (cards_width / 2) - (gap / 2), cards_height - 1), 4, "#ffffff", "#4B4848")
+    draw.text((((cards_width / 2) - (gap / 2) - rank_1_width) / 1.4, (cards_height - rank_1_height - 1) / 4), rank_1, card_1_color, font=rank_font)
+    draw.text((card_1_x + 1, card_y - 6), suit_dict[suit_1], card_1_color, font=suit_font)
     draw.rounded_rectangle(((cards_width / 2) + (gap / 2), 0, cards_width - 1, cards_height - 1), 4, "#ffffff", "#4B4848")
-    draw.text(((cards_width - gap - rank_2_width + 12) * 0.75, (cards_height - rank_2_height - 5) / 2), rank_2, card_2_color, font=rank_font)
-    draw.text(((cards_width - gap - suit_2_width + 17) * 0.5, (cards_height - suit_2_height - 70) / 8), suit_dict[suit_2], card_2_color, font=suit_font)
+    draw.text((card_2_x + (((cards_width / 2) - (gap / 2) - rank_1_width) / 1.4), (cards_height - rank_1_height - 1) / 4), rank_2, card_2_color, font=rank_font)
+    draw.text((card_2_x + (card_1_x + 1), card_y - 6), suit_dict[suit_2], card_2_color, font=suit_font)
 
     return cards_img
 
@@ -131,13 +134,15 @@ def normalize_float(num: float, decimals: int = 2) -> float | int:
 
 
 def get_data(depth, spot_position, spot, villain_position, folder):
+   
+    
     for path in Path(folder).iterdir():
         if not path.is_file():
 
             continue
         file_extension = str(path).removeprefix(f"{folder}\\")
         file_name = file_extension.removesuffix(".json")
-        if (depth not in file_name):
+        if f"_{depth}bb_" not in file_name:
 
             continue
         with open(path, "r", encoding="utf-8") as f:
@@ -145,6 +150,7 @@ def get_data(depth, spot_position, spot, villain_position, folder):
         if villain_position and villain_position != "None":
             data = data_temp[spot_position][spot][villain_position]
         else:
+
             data = data_temp[spot_position][spot]
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = data
 
@@ -630,79 +636,105 @@ def draw_pool_chart(pool: set[str]):
             else:
                 draw.text((combo_x, combo_y), combo, font=matrix_font, fill="black")
 
-            
-
     return chart
 
 
-def get_right_action(combo_info: dict):
+def get_right_action_precise_frequency(combo_info: dict):
     sorted_dict = dict(sorted(combo_info.items(), key=lambda item: item[1][0]))
     accumulated = 0
     carry = 0.0
     actions_range = {}
-    for action, data in sorted_dict.items():
+    last_index = len(combo_info) - 1
+    for i, (action, data) in enumerate(sorted_dict.items()):
         freq = data[0]
-        if carry.is_integer() and carry > 0:
+        carry = ceil(carry)
+        if carry > 0:
             carry += 1
+        if i != last_index:
+            actions_range[action] = [freq + accumulated, carry, int(freq)]
         else:
-            carry = ceil(carry)
-        actions_range[action] = [freq + accumulated, carry, int(freq)]
+            actions_range[action] = [freq + accumulated, carry, 100]
         carry = freq
         accumulated += freq
     rng = random.random() * 100
     right_action = None
     for k, v in actions_range.items():
-        if rng <= v[0]:
+        if rng < v[0]:
             right_action = k
             break
     if not right_action:
         right_action = list(sorted_dict.keys())[-1]
-    rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
+    final_rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
 
-    return right_action, rng
+    return right_action, final_rng
+
+
+# def get_right_action(combo_info: dict):
+#     sorted_dict = dict(sorted(combo_info.items(), key=lambda item: item[1][0]))
+#     accumulated = 0
+#     carry = 0.0
+#     actions_range = {}
+#     for action, data in sorted_dict.items():
+#         freq = data[0]
+#         if carry.is_integer() and carry > 0:
+#             carry += 1
+#         else:
+#             carry = ceil(carry)
+#         actions_range[action] = [freq + accumulated, carry, int(freq)]
+#         carry = freq
+#         accumulated += freq
+#     rng = random.random() * 100
+#     right_action = None
+#     for k, v in actions_range.items():
+#         if rng < v[0]:
+#             right_action = k
+#             break
+#     if not right_action:
+#         right_action = list(sorted_dict.keys())[-1]
+#     rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
+
+#     return right_action, rng
 
 
 def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text):
     right_action_freq = [v[0] for k, v in combo_info.items() if k == right_action][0]
     line1 = ""
     line2 = ""
-    line1 += f"ACTION CHOOSED: {action_choosed} ⬅️"
-    # print("ACTION TAKEN:", action_choosed, "⬅️")
+    line1 += f"CHOSEN: {action_choosed} ⬅️"
     right_action_ev = [v[1] for k, v in combo_info.items() if k == right_action][0]
     action_choosed_freq = [v[0] for k, v in combo_info.items() if k == action_choosed][0]
     action_choosed_ev = [v[1] for k, v in combo_info.items() if k == action_choosed][0]
-    line1 += f" | RANDOM BEST: {right_action} ✅ | "
-    # print("RANDOM BEST:", right_action, "✅")
-    line2 += f"{spot_text}     "
-    line2 += "  |  ".join(f"{k}: {v}" for k, v in combo_info.items())
-    line2_label.config(text=line2)
-    # for k, v in combo_info.items():
-        # print(k, v)
+    line1 += f" | BEST: {right_action} ✅"
+
+    line2_text.config(state="normal")
+    line2_text.delete("1.0", "end")
+
+    line2_text.insert("end", f"{combo} | RNG: {rng}     ")
+
+    for i, (action, data) in enumerate(combo_info.items()):
+        line2_text.insert("end", f"{action}: {data}", action)
+
+        if i < len(combo_info) - 1:
+            line2_text.insert("end", "  |  ")
+
+    line2_text.config(state="disabled")
+    
     if action_choosed == right_action:
-        # print("🃏🃏", combo, "🎲", rng)
-        # print(1, 0)
-        # print("🟢 RIGHT ANSWER 🟢")
         answer_color = "green"
-        line1 += f"HAND {combo} | RNG: {rng} | Acc/EVloss: 1 / 0   🟢 RIGHT ANSWER 🟢"
+        line1 += f"   {spot_text}   🟢 RIGHT ANSWER 🟢   Acc/EVloss: (1 / 0)"
         line1_label.config(text=line1, bg=answer_color)
         return 1, 0, right_action_ev
     else:
         freq_spread = normalize_float(1 - ((right_action_freq - action_choosed_freq) / 100), 4) if right_action_freq > action_choosed_freq else normalize_float(1 - ((action_choosed_freq - right_action_freq) / 100), 4)
         ev_spread = normalize_float(abs(action_choosed_ev) - right_action_ev) if right_action_ev > action_choosed_ev else 0
         if ev_spread == 0:
-            # print("🃏🃏", combo, "🎲", rng)
-            # print(freq_spread, ev_spread)
-            # print("🟡 IMPRECISE ANSWER 🟡")
             answer_color = "yellow"
             answer_text_color = "black"
-            line1 += f"HAND: {combo} | RNG: {rng} | Acc/EVloss: {freq_spread} / {ev_spread}   🟡 IMPRECISE ANSWER 🟡"
+            line1 += f"   {spot_text}   🟡 IMPRECISE ANSWER 🟡   Acc/EVloss: ({freq_spread} / {ev_spread})"
         else:
-            # print("🃏🃏", combo, "🎲", rng)
-            # print(freq_spread, ev_spread)
-            # print("🔴 WRONG ANSWER 🔴")
             answer_color = "red"
             answer_text_color = "black"
-            line1 += f"HAND: {combo} | RNG: {rng} | Acc/EVloss: {freq_spread} / {ev_spread}   🔴 WRONG ANSWER 🔴"
+            line1 += f"   {spot_text}   🔴 WRONG ANSWER 🔴   Acc/EVloss: ({freq_spread} / {ev_spread})"
         line1_label.config(text=line1, fg=answer_text_color, bg=answer_color)
         return freq_spread, ev_spread, right_action_ev
 
@@ -730,24 +762,13 @@ def toggle_pool(event=None):
 
 
 def play(combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict):
-    
-    result_dict = {"hands_played": 0, "right_hands_count": 0, "last_right": False, "right_streak": 0, "max_streak": 0, "imprecise_hands_count": 0, "wrong_hands_count": 0}
-    played_hands = {}
-    right_hands = {}
-    imprecise_hands = {}
-    wrong_hands = {}
-    total_freq_points = 0
-    ev_loss = 0
-    total_ev = 0
     combo = random.choice(combo_pool)
     cards_img_temp = draw_cards(combo)
     cards_img = ImageTk.PhotoImage(cards_img_temp)
     seats[0].hero_cards_label.config(image=cards_img)
     # seats[0].hero_cards_label.image = cards_img
-    played_hands.setdefault(combo, 0)
-    played_hands[combo] += 1
     combo_info = combos_dict[combo][1]
-    right_action, rng = get_right_action(combo_info)
+    right_action, rng = get_right_action_precise_frequency(combo_info)
     rng_label.config(bg=bgd_color, text=str(rng), font=("Arial", 20))
     spot_text = mode_str + " " + spot_string
     spot_str_label.config(text=spot_text)
@@ -783,6 +804,45 @@ def play(combo_pool, combos_order, mode_str, spot_string, spot_actions, mode_dep
     root.wait_variable(action_selected)
     freq_point, ev_point, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text)
 
+    return combo, freq_point, ev_point, right_action_ev
+
+
+def draw_villain_cards(cards_width):
+    def draw_card_back(draw, cards_width, card_x0, card_y0, card_x1, card_y1, size=4, color1="#8CB4FF", color2="#3E6CC4"):
+        border = cards_width // 20
+        left   = card_x0 + border
+        top    = card_y0 + border
+        right  = card_x1 - border
+        bottom = card_y1 - border
+        draw.rectangle((left, top, right, bottom), "#FFFFFF", "#4B4848")
+        for y in range(top, bottom, size):
+            for x in range(left, right, size):
+                if x + size > right or y + size > bottom:
+
+                    continue
+                if ((x - left) // size + (y - top) // size) % 2 == 0:
+                    draw.polygon([(x, y), (x + size, y), (x, y + size)], fill=color1)
+                    draw.polygon([(x + size, y), (x + size, y + size), (x, y + size)], fill=color2)
+                else:
+                    draw.polygon([(x, y), (x + size, y), (x + size, y + size)], fill=color1)
+                    draw.polygon([(x, y), (x + size, y + size), (x, y + size)], fill=color2)
+
+    cards_height = int((cards_width / 2) * 1.36)
+    gap = 2
+    card_1_x0 = 0
+    card_1_x1 = (cards_width // 2) - (gap // 2)
+    card_2_x0 = (cards_width // 2) + (gap // 2)
+    card_2_x1 = cards_width - 1
+    card_y0 = 0
+    card_y1 = cards_height - 1
+    cards_img = Image.new("RGB", (cards_width + 1, cards_height + 1), "#515152")
+    draw = ImageDraw.Draw(cards_img)
+    draw.rounded_rectangle((card_1_x0, card_y0, card_1_x1, card_y1), 4, "#ffffff", "#4B4848")
+    draw_card_back(draw, cards_width, card_1_x0, card_y0, card_1_x1, card_y1)
+    draw.rounded_rectangle((card_2_x0, card_y0, card_2_x1, card_y1), 4, "#ffffff", "#4B4848")
+    draw_card_back(draw, cards_width, card_2_x0, card_y0, card_2_x1, card_y1)
+
+    return cards_img
 
     
 
@@ -809,25 +869,32 @@ class Seat():
         if "Raise" in self.action or "Allin" in self.action:
             self.bet = self.action.split(" ")[1]
 
-        angle = ((2 * pi) * (self.index / 8)) + (pi / 2)
+        if self.index == 0:
+            self.cards_width = 90
+            self.cards_height = int((self.cards_width / 2) * 1.36)
+        else:
+            self.cards_width = 64
+            self.cards_height = int((self.cards_width / 2) * 1.36)
+        
+        self.angle = ((2 * pi) * (self.index / 8)) + (pi / 2)
 
-        circle_center_x = oval_center_x + (oval_radius_x * cos(angle))
-        circle_center_y = oval_center_y + (oval_radius_y * sin(angle))
+        self.circle_center_x = oval_center_x + (oval_radius_x * cos(self.angle))
+        self.circle_center_y = oval_center_y + (oval_radius_y * sin(self.angle))
 
-        cards_center_x = (oval_center_x + ((oval_radius_x + circle_radius + 30) * cos(angle)))
-        cards_center_y = (oval_center_y + ((oval_radius_y + circle_radius + 30) * sin(angle)))
-        card_x_0 = cards_center_x - (cards_width / 2)
-        card_y_0 = cards_center_y - (cards_height / 2)
-        card_x_1 = cards_center_x + (cards_width / 2)
-        card_y_1 = cards_center_y + (cards_height / 2)
+        cards_center_x = (oval_center_x + ((oval_radius_x + circle_radius + 30) * cos(self.angle)))
+        cards_center_y = (oval_center_y + ((oval_radius_y + circle_radius + 30) * sin(self.angle)))
+        card_x_0 = cards_center_x - (self.cards_width / 2)
+        card_y_0 = cards_center_y - (self.cards_height / 2)
+        card_x_1 = cards_center_x + (self.cards_width / 2)
+        card_y_1 = cards_center_y + (self.cards_height / 2)
         if self.action != "Fold":
             canvas.create_rectangle((card_x_0, card_y_0, card_x_1, card_y_1), fill="white", outline="black")
         else:
             canvas.create_rectangle((card_x_0, card_y_0, card_x_1, card_y_1), fill=bgd_color, outline=bgd_color)
 
         if self.position != "BTN":
-            btn_center_x = (oval_center_x + ((oval_radius_x - circle_radius) * cos(angle)))
-            btn_center_y = (oval_center_y + ((oval_radius_y - circle_radius) * sin(angle)))
+            btn_center_x = (oval_center_x + ((oval_radius_x - circle_radius) * cos(self.angle)))
+            btn_center_y = (oval_center_y + ((oval_radius_y - circle_radius) * sin(self.angle)))
 
             canvas.create_oval(
                 btn_center_x - btn_radius,
@@ -839,26 +906,34 @@ class Seat():
             )
 
         canvas.create_oval(
-            circle_center_x - circle_radius,
-            circle_center_y - circle_radius,
-            circle_center_x + circle_radius,
-            circle_center_y + circle_radius,
+            self.circle_center_x - circle_radius,
+            self.circle_center_y - circle_radius,
+            self.circle_center_x + circle_radius,
+            self.circle_center_y + circle_radius,
             fill="white",
             outline="black"
         )
         self.position_label = tk.Label(root, text=self.position, bg="white", font=("Arial", 13, "bold"), width=4, anchor="center")
-        self.position_label.place(x=circle_center_x - 23, y=circle_center_y - 17)
+        self.position_label.place(x=self.circle_center_x - 23, y=self.circle_center_y - 17)
 
         self.stack_label = tk.Label(root, text=self.stack, bg="white", font=("Arial", 8), width=5, anchor="center")
-        self.stack_label.place(x=circle_center_x - 18, y=circle_center_y + 5)
+        self.stack_label.place(x=self.circle_center_x - 18, y=self.circle_center_y + 5)
 
         if self.index == 0:
             self.hero_cards_label = tk.Label(root, bg="white", bd=0, highlightthickness=0, padx=0, pady=0)
-            self.hero_cards_label.place(x=cards_center_x - 32, y=cards_center_y - 21)
+            self.hero_cards_label.place(x=cards_center_x - 45, y=cards_center_y - 30)
+        else:
+            self.villain_cards_label = tk.Label(root, bg="blue", bd=0, highlightthickness=0, padx=0, pady=0)
+            self.villain_cards_label.place(x=cards_center_x - (self.cards_width // 2), y=cards_center_y - (self.cards_height // 2))
+            cards_img_temp_vil = draw_villain_cards(self.cards_width)
+            cards_img_vil = ImageTk.PhotoImage(cards_img_temp_vil)
+            self.villain_cards_label.config(image=cards_img_vil)
+            self.villain_cards_label.image = cards_img_vil
+
 
         if self.position == "BTN":
-            btn_center_x = (oval_center_x + ((oval_radius_x - circle_radius) * cos(angle)))
-            btn_center_y = (oval_center_y + ((oval_radius_y - circle_radius) * sin(angle)))
+            btn_center_x = (oval_center_x + ((oval_radius_x - circle_radius) * cos(self.angle)))
+            btn_center_y = (oval_center_y + ((oval_radius_y - circle_radius) * sin(self.angle)))
 
             canvas.create_oval(
                 btn_center_x - btn_radius,
@@ -870,8 +945,8 @@ class Seat():
             )
             canvas.create_text((btn_center_x, btn_center_y), text="D", fill="#000000")
 
-        bet_center_x = (oval_center_x + ((oval_radius_x - circle_radius - 34) * cos(angle)))
-        bet_center_y = (oval_center_y + ((oval_radius_y - circle_radius - 34) * sin(angle)))
+        bet_center_x = (oval_center_x + ((oval_radius_x - circle_radius - 34) * cos(self.angle)))
+        bet_center_y = (oval_center_y + ((oval_radius_y - circle_radius - 34) * sin(self.angle)))
         self.bet_label = tk.Label(root, text=self.bet, bg=table_color, font=("Arial", 10, "bold"), width=6, anchor="center")
         self.bet_label.place(x=bet_center_x - 27, y=bet_center_y - 11)
 
@@ -886,19 +961,22 @@ root.resizable(False, False)
 table_color = "#61cc4b"
 bgd_color = "#515152"
 
-folder_var = tk.StringVar(root, value="json_results_2")
+folder_var = tk.StringVar(root, value="json_results")
 depth_var = tk.StringVar(root, value="200")
 hero_position_var = tk.StringVar(root, value="UTG")
 spot_action_text_var = tk.StringVar(root, value="rfi")
 villain_position_var = tk.StringVar(root, value="None")
-combo_pool_type_var = tk.StringVar(root, value="mb-0")
+combo_pool_type_var = tk.StringVar(root, value="bd-0.01-0.7")
 action_selected = tk.BooleanVar(value=False)
 
 canvas = tk.Canvas(root, width = root_width, height = root_height, background=bgd_color)
 canvas.pack()
 
-oval_center_x = root_width // 3.2
+oval_center_x = (root_width // 3.2) - 26
 oval_center_y = root_height // 2.1
+
+# marker_frame = tk.Frame(root, width=799, height=707, bg="blue")
+# marker_frame.place(x=0, y=0)
 
 oval_radius_x = 300
 oval_radius_y = 175
@@ -917,7 +995,8 @@ spot_str_label.place(x=oval_center_x - 150, y= oval_center_y)
 
 circle_radius = 35
 btn_radius = 7
-cards_width = 64
+
+cards_width = 90
 cards_height = int((cards_width / 2) * 1.36)
 
 seats: list[Seat] = []
@@ -925,10 +1004,10 @@ for i in range(8):
     seats.append(Seat(i))
     seats[i].draw_seat()
 
-depths = ["200", "160", "130", "100", "80", "70", "60"]
+depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40"]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
-spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp"]
-combo_pool_types = ["bd-0.01-0.7", "mb-0"]
+spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low"]
+combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-0.01", "mb-0.1", "mb-0"]
 
 depth_dropdown = tk.OptionMenu(root, depth_var, *depths)
 depth_dropdown.place(x=900, y=2)
@@ -947,9 +1026,9 @@ def get_possible_villains(selected=None):
 
         if spot_action == "rfi":
             villains = ["None"]
-        elif spot_action in ["vs_rfi", "vs_open_shove"]:
+        elif spot_action in ["vs_rfi", "vs_open_shove", "vs_limp"]:
             villains = positions_before
-        elif spot_action in ["vs_3bet_nai_low", "vs_3bet_ai"]:
+        elif spot_action in ["vs_3bet_nai_low", "vs_3bet_ai", "vs_raise_ai", "vs_raise_nai_low"]:
             villains = positions_after
         else:
             villains = ["None"]
@@ -1002,13 +1081,18 @@ training = False
 def start_trainer():
     global training
     training = True
-    add_solution()
-    
-    h_key_label = tk.Label(root, text="Type <h> to toggle help")
-    h_key_label.place(x=1046, y=343)
 
-    p_key_label = tk.Label(root, text="Type <p> to toggle pool")
-    p_key_label.place(x=1206, y=343)
+    if spots_listbox.size() == 0:
+            add_solution()
+
+    result_dict = {"hands_played": 0, "right_hands_count": 0, "last_right": False, "right_streak": 0, "max_streak": 0, "imprecise_hands_count": 0, "wrong_hands_count": 0}
+    played_hands = {}
+    right_hands = {}
+    imprecise_hands = {}
+    wrong_hands = {}
+    total_freq_points = 0
+    ev_loss = 0
+    total_ev = 0
 
     while training:
         
@@ -1039,12 +1123,42 @@ def start_trainer():
             root.update()
      
         pool = get_combo_pool(options[4], spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos)
-        play(pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+        combo, freq_point, ev_point, right_action_ev = play(pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+
+        played_hands.setdefault(combo, 0)
+        played_hands[combo] += 1
+        total_freq_points += freq_point
+        ev_loss += ev_point
+        total_ev += right_action_ev
+        result_dict["hands_played"] += 1
+        if freq_point == 1:
+            result_dict["right_hands_count"] += 1
+            right_hands.setdefault(combo, 0)
+            right_hands[combo] += 1
+            if result_dict["last_right"]:
+                result_dict["right_streak"] += 1
+                result_dict["max_streak"] = result_dict["right_streak"] if result_dict["right_streak"] > result_dict["max_streak"] else result_dict["max_streak"]
+            result_dict["last_right"] = True
+        elif ev_point == 0:
+            result_dict["imprecise_hands_count"] += 1
+            imprecise_hands.setdefault(combo, 0)
+            imprecise_hands[combo] += 1
+            result_dict["last_right"] = False
+            result_dict["right_streak"] = 0
+        else:
+            result_dict["wrong_hands_count"] += 1
+            wrong_hands.setdefault(combo, 0)
+            wrong_hands[combo] += 1
+            result_dict["last_right"] = False
+            result_dict["right_streak"] = 0
+        accuracy = normalize_float(total_freq_points / result_dict["hands_played"])
+        line = f"🟢 {normalize_float(result_dict["right_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"]}) | 🟡 {normalize_float(result_dict["imprecise_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["imprecise_hands_count"]}) | 🔴 {normalize_float(result_dict["wrong_hands_count"]/result_dict["hands_played"] * 100, 2)}% ({result_dict["wrong_hands_count"]}) | 👍 {normalize_float((result_dict["right_hands_count"] + result_dict["imprecise_hands_count"])/result_dict["hands_played"] * 100, 2)}% ({result_dict["right_hands_count"] + result_dict["imprecise_hands_count"]}) | Streak: {result_dict["right_streak"]} | Best Streak: {result_dict["max_streak"]}\nHANDS: {result_dict["hands_played"]} | ACC: {normalize_float(accuracy*100, 2)}% | EV loss: {normalize_float(ev_loss, 2)}/{normalize_float(total_ev, 2)}"
+        partials_label.config(text=line)
+
 
 def stop_trainer():
     global training
     training = False
-    time.sleep(1)
     print("STOPPED")
 
     return
@@ -1083,8 +1197,11 @@ start_trainer_buttom.place(x=880, y=462)
 stop_trainer_buttom = tk.Button(root, text="STOP", command=stop_trainer)
 stop_trainer_buttom.place(x=950, y=462)
 
-partials_frame = tk.Frame(root, bg="black", width=100, height=20)
+partials_frame = tk.Frame(root, bg="black", width=700, height=15)
 partials_frame.place(x=10, y=10)
+
+partials_label = tk.Label(partials_frame, bg="white", font=("Times New Roman", 11, "bold"))
+partials_label.pack(fill="both", expand=True)
 
 options_frame_out = tk.Frame(root, bg=bgd_color, width=800, height=40)
 options_frame_out.place(x=10, y=610)
@@ -1097,8 +1214,26 @@ current_result_frame = tk.Frame(root, bg=bgd_color, width=800, height=45)
 current_result_frame.place(x=10, y=658)
 line1_label = tk.Label(current_result_frame, text="", bg=bgd_color, fg="white", anchor="w")
 line1_label.place(relx=0.5, y=10, anchor="center")
-line2_label = tk.Label(current_result_frame, text="", bg=bgd_color, fg="white", anchor="w")
-line2_label.place(relx=0.5, y=32, anchor="center")
+# line2_label = tk.Label(current_result_frame, text="", bg=bgd_color, fg="white", anchor="w")
+# line2_label.place(relx=0.5, y=32, anchor="center")
+line2_text = tk.Text(
+    current_result_frame,
+    bg=bgd_color,
+    fg="white",
+    font=("Arial", 12, "bold"),
+    height=1,
+    width=88,
+    bd=0,
+    highlightthickness=0,
+    wrap="none"
+)
+line2_text.place(relx=0.5, y=32, anchor="center")
+print(line2_text.winfo_reqwidth())
+
+line2_text.tag_config("Fold", foreground="cyan")
+line2_text.tag_config("Call", foreground="green")
+line2_text.tag_config("Raise", foreground="white")
+line2_text.tag_config("Allin", foreground="#9e1c1c")
 
 help_frame = tk.Frame(root, bg="black", width=325, height=336)
 help_label = tk.Label(help_frame, bd=0)
@@ -1108,8 +1243,17 @@ pool_frame = tk.Frame(root, bg="black", width=325, height=336)
 pool_label = tk.Label(pool_frame, bd=0)
 pool_label.pack()
 
+h_key_label = tk.Label(root, text="Type <h> to toggle help")
+h_key_label.place(x=1046, y=343)
+
+p_key_label = tk.Label(root, text="Type <p> to toggle pool")
+p_key_label.place(x=1206, y=343)
+
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
+h_key_label.bind("<Button-1>", toggle_help)
+p_key_label.bind("<Button-1>", toggle_pool)
+
 
 
 
