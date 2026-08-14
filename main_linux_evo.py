@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from math import ceil, sin, cos, pi
 from pathlib import Path
 import json
@@ -738,6 +739,18 @@ def show_clock():
         clock_label.pack_forget()
 
 
+def show_password_press(event):
+    password_entry.config(show="")
+
+
+def show_password_release(event):
+    password_entry.config(show="*")
+
+
+def show_password_leave(event):
+    password_entry.config(show="*")
+
+
 
 training = False
 paused = False
@@ -798,11 +811,15 @@ villain_position_var = tk.StringVar(root, value="None")
 combo_pool_type_var = tk.StringVar(root, value="bd-0.01-0.7")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=False)
+pause_each_var = tk.BooleanVar(value=True)
+limit_type_var = tk.StringVar(root, value="hands")
+limit_value_var = tk.StringVar(root, value="inf")
 
-depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "25", "15", "10"]
+depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
 spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]
 combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
+limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
@@ -835,56 +852,98 @@ options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_h
 options_frame.pack(side="left")
 options_frame.pack_propagate(False)
 
+user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+user_frame.place(relx=0.5, rely=0.075, anchor="center")
+user_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="User")
+user_label.grid(row=0, column=0, columnspan=4)
+user_entry = tk.Entry(user_frame, width=30, justify="center")
+user_entry.grid(row=1, column=0, columnspan=4)
+password_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="Password")
+password_label.grid(row=2, column=0, columnspan=2, sticky='e')
+show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁 Show", cursor="hand2")
+show_password.grid(row=2, column=1, columnspan=2, sticky='e', padx=5)
+password_entry = tk.Entry(user_frame, width=30, justify="center")
+password_entry.config(show="*")
+password_entry.grid(row=3, column=0, columnspan=4)
+login_button = tk.Button(user_frame, bd=0, pady=0, padx=2, text="LOGIN")
+login_button.grid(row=4, column=0)
+logout_button = tk.Button(user_frame, bd=0, pady=0, padx=2, text="LOGOUT")
+logout_button.grid(row=4, column=1)
+add_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=2, text="ADD USR")
+add_usr_button.grid(row=4, column=2)
+del_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=2, text="DEL USR")
+del_usr_button.grid(row=4, column=3)
+
 dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-dropdowns_frame.place(relx=0.5, rely=0.06, anchor="center")
-depth_dropdown = tk.OptionMenu(dropdowns_frame, depth_var, *depths)
-depth_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
-depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=(0,5))
+dropdowns_frame.place(relx=0.5, rely=0.228, anchor="center")
+depth_dropdown = ttk.Combobox(dropdowns_frame, textvariable=depth_var, values=depths, width=4, state="readonly", height=20)
+depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=0)
 hero_position_dropdown = tk.OptionMenu(dropdowns_frame, hero_position_var, *positions, command=get_possible_villains)
 hero_position_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
-hero_position_dropdown.grid(row=0, column=1, sticky="w", pady=(0,5))
+hero_position_dropdown.grid(row=0, column=1, columnspan=2, sticky="w", pady=0)
 spot_action_text_dropdown = tk.OptionMenu(dropdowns_frame, spot_action_text_var, *spot_actions_text, command=get_possible_villains)
 spot_action_text_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
 spot_action_text_dropdown.grid(row=1, column=0, sticky="e", padx=(0,5))
 villain_position_dropdown = tk.OptionMenu(dropdowns_frame, villain_position_var, *possible_villains)
 villain_position_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
-villain_position_dropdown.grid(row=1, column=1, sticky="w")
+villain_position_dropdown.grid(row=1, column=1, columnspan=2, sticky="w")
 combo_pool_type_dropdown = tk.OptionMenu(dropdowns_frame, combo_pool_type_var, *combo_pool_types)
 combo_pool_type_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
-combo_pool_type_dropdown.grid(row=2, column=0, columnspan=2, pady=(5,0))
+combo_pool_type_dropdown.grid(row=2, column=0)
+spot_action_entry_1 = tk.Entry(dropdowns_frame, width=7)
+spot_action_entry_1.grid(row=2, column=1, sticky="w", padx=2, pady=0)
+spot_action_entry_2 = tk.Entry(dropdowns_frame, width=7)
+spot_action_entry_2.grid(row=2, column=2, sticky="w", padx=0, pady=0)
+edit_pool_button = tk.Button(dropdowns_frame, bd=0, pady=0, padx=5, text="EDIT POOL")
+edit_pool_button.grid(row=3, column=0, columnspan=3)
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-solutions_btns_frame.place(relx=0.5, rely=0.15, anchor="center")
-add_solution_buttom = tk.Button(solutions_btns_frame, pady=0, padx=5, text="ADD SPOT", command=add_solution)
-add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=(5,0))
-del_solution_buttom = tk.Button(solutions_btns_frame, pady=0, padx=5, text="DEL SPOT", command=delete_solution)
-del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=(5,0))
-del_all_buttom = tk.Button(solutions_btns_frame, pady=0, padx=5, text="DEL ALL", command=delete_all_solution)
-del_all_buttom.grid(row=3, column=2, pady=(5,0))
+solutions_btns_frame.place(relx=0.5, rely=0.315, anchor="center")
+add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT", command=add_solution)
+add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
+del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT", command=delete_solution)
+del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=0)
+del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL", command=delete_all_solution)
+del_all_buttom.grid(row=3, column=2, pady=0)
 
 listbox_frame = tk.Frame(options_frame, width=options_frame_width)
-listbox_frame.place(relx=0.5, rely=0.44, anchor="center")
+listbox_frame.place(relx=0.5, rely=0.55, anchor="center")
 scrollbar = tk.Scrollbar(listbox_frame, orient="vertical")
 scrollbar.pack(side="right", fill="y")
 spots_listbox = tk.Listbox(listbox_frame, width=36, height=15, yscrollcommand=scrollbar.set)
 spots_listbox.pack(side="left")
 
+limits_frame = tk.Frame(options_frame, width=options_frame_width, background=bgd_color)
+limits_frame.place(relx=0.5, rely=0.79, anchor="center")
+limit_label = tk.Label(limits_frame, fg='white', bg=bgd_color, pady=0, text="LIMIT:")
+limit_label.pack(side="left")
+limit_type_dropdown = tk.OptionMenu(limits_frame, limit_type_var, *limits_types)
+limit_type_dropdown.config(height=1, pady=0, border=0, borderwidth=0)
+limit_type_dropdown.pack(side="left")
+limit_value_entry = tk.Entry(limits_frame, textvariable=limit_value_var, width=7, justify='center')
+limit_value_entry.pack(side="left")
+
+extr_opt_frame = tk.Frame(options_frame, width=options_frame_width)
+extr_opt_frame.place(relx=0.5, rely=0.83, anchor="center")
+pause_each_checkbox = tk.Checkbutton(extr_opt_frame, variable=pause_each_var, bd=0, foreground="white", selectcolor="black", bg=bgd_color, text="Freeze between hands")
+pause_each_checkbox.pack()
+
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-start_stop_btns_frame.place(relx=0.51, rely=0.68, anchor="center")
-start_trainer_buttom = tk.Button(start_stop_btns_frame, pady=0, padx=5, text="START", command=start_trainer)
+start_stop_btns_frame.place(relx=0.51, rely=0.88, anchor="center")
+start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START", command=start_trainer)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
-pause_trainer_buttom = tk.Button(start_stop_btns_frame, pady=0, padx=5, text="PAUSE", command=pause_trainer)
+pause_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="PAUSE", command=pause_trainer)
 pause_trainer_buttom.grid(row=0, column=1, padx=(0, 15))
-stop_trainer_buttom = tk.Button(start_stop_btns_frame, pady=0, padx=5, text="STOP", command=stop_trainer)
+stop_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="STOP", command=stop_trainer)
 stop_trainer_buttom.grid(row=0, column=2)
 
 status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
-status_frame.place(relx=0.5, rely=0.73, anchor="center")
+status_frame.place(relx=0.5, rely=0.93, anchor="center")
 status_label = tk.Label(status_frame, bg=bgd_color, text="STOPPED", foreground="white", font=("Arial", 12, "bold"))
 status_label.pack()
 
 clock_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
-clock_frame.place(relx=0.5, rely=0.78, anchor="center")
+clock_frame.place(relx=0.5, rely=0.98, anchor="center")
 clock_frame.pack_propagate(False)
 clock_check_btn = tk.Checkbutton(clock_frame, command=show_clock, variable=clock_var, text="show clock", foreground="white", selectcolor="black", bg=bgd_color)
 clock_check_btn.pack(side="left")
@@ -908,5 +967,8 @@ root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
 h_key_label.bind("<Button-1>", toggle_help)
 p_key_label.bind("<Button-1>", toggle_pool)
+show_password.bind("<ButtonPress-1>", show_password_press)
+show_password.bind("<ButtonRelease-1>", show_password_release)
+show_password.bind("<Leave>", show_password_leave)
 
 root.mainloop()
