@@ -592,11 +592,11 @@ def get_right_action(combo_info: dict):
 
 def get_answer(combo, action_choosed, right_action, rng, combo_info):
     right_action_freq = [v[0] for k, v in combo_info.items() if k == right_action][0]
-    print("ACTION TAKEN:", action_choosed, "⬅️")
+    print("CHOSEN:", action_choosed, "⬅️")
     right_action_ev = [v[1] for k, v in combo_info.items() if k == right_action][0]
     action_choosed_freq = [v[0] for k, v in combo_info.items() if k == action_choosed][0]
     action_choosed_ev = [v[1] for k, v in combo_info.items() if k == action_choosed][0]
-    print("RANDOM BEST:", right_action, "✅")
+    print("RIGHT:", right_action, "✅")
     for k, v in combo_info.items():
         print(k, v)
     if action_choosed == right_action:
@@ -728,7 +728,7 @@ def main() -> None:
     # ALL_EV & 0EV: "tot-100"
     # 0EV: "mb-0"
     # THIN_BORDER: "bd-0.01-0.7"
-    options = ["json_results_2", "50", "BTN", "rfi", None, "bd-0.01-0.7"]
+    options = ["json_results", "50", "BTN", "rfi", None, "bd-0.01-0.7"]
 
     mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(*options[:-1])
     mode_str, spot_string, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)

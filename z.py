@@ -1,32 +1,18 @@
-import tkinter as tk
-from math import ceil, sin, cos, pi
-from pathlib import Path
-import json
-import random
-from PIL import Image, ImageDraw, ImageFont, ImageTk
+ls = [
+    "KTs", "85o", "72o", "J3o", "83o", "K6o", "Q7o", "86o", "52s", "Q2o",
+    "83s", "82o", "T5s", "J3s", "KK", "92o", "95s", "Q9s", "Q6s", "K7o",
+    "T5o", "T7o", "96s", "97s", "A6s", "43o", "JJ", "TT", "J4s", "QQ",
+    "85s", "A2o", "AJs", "T4o", "J9s", "AJo", "88", "T3o", "63o", "KQs",
+    "Q5s", "QTo", "T8o", "75s", "99", "Q2s", "64o", "K2s", "KQo", "A8o",
+    "AKo", "AQs", "72s", "77", "53o", "42o", "98o", "J8s", "AA", "76o",
+    "A7o", "55", "AQo", "86s", "66", "75o", "Q7s", "KJo", "76s", "93o",
+    "K2o", "73s", "Q4s", "93s", "T4s", "T2o", "J2s", "62s", "62o", "32s",
+    "Q6o", "A7s", "T6o", "43s", "A6o", "K7s", "65s", "Q8o", "54o", "A5s",
+    "K8o", "65o", "QTs", "KJs", "K6s", "T3s", "J7s", "ATo", "A9o", "T7s",
+    "K5s", "T9s", "42s", "J9o", "22", "JTs", "92s", "97o", "A3s", "KTo",
+    "J5s", "ATs", "Q8s", "53s", "T6s", "98s", "QJs", "A3o", "K5o", "QJo",
+    "K4s", "J6s", "Q9o", "A8s", "52o", "JTo", "95o", "74s", "J5o", "82s",
+    "Q3s", "84s"
+]
 
-root = tk.Tk()
-root.title("Preflop")
-root_width, root_height = 1366, 707
-root.geometry(f"{root_width}x{root_height}+0+0")
-root.resizable(False, False)
-
-main_frame_width, main_frame_height = 800, 707
-options_frame_width, options_frame_height = 241, 707
-charts_frame_width, charts_frame_height = 325, 707
-
-bgd_color = "#515152"
-table_color = "#61cc4b"
-btn_color = "#F39508"
-position_color = "#E9E9E9"
-
-main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
-main_frame.pack(side="left")
-
-canvas = tk.Canvas(main_frame, width=main_frame_width, height=main_frame_height, background=bgd_color)
-canvas.pack()
-
-cards_width = 96 # 64
-cards_height = int((cards_width / 2) * 1.36)
-
-root.mainloop()
+print(len(ls))

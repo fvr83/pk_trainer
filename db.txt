@@ -1,0 +1,18 @@
+table train
+user
+  |_ date
+  |_ start_time
+  |_ end_time
+  |_ hands_trained
+  |_ train_accuracy
+  |_ train_evloss
+  |_ train_max_streak
+  |_ spot
+    |_ spot_hands_trained
+    |_ spot_accuracy
+    |_ spot_evloss
+    |_ spot_max_streak
+    |_ combo
+      |_ times_played
+      |_ combo_accuracy
+      |_ combo_avg_time_decision
