@@ -684,11 +684,13 @@ def draw_table(canvas: tk. Canvas, combo, rng, positions_in_order, pot_odds_and_
     spot_text_parts = spot_text.split(" | ")
     table_line1 = " | ".join(part for part in spot_text_parts[:2])
     table_line2 = " | ".join(part for part in spot_text_parts[2:])
-    pot_odds = f"Pot odds: {pot_odds_and_stacks[0]["pot_odds"]} %"
+    pot = f"{pot_odds_and_stacks[0]["current_pot"]} bb"
+    pot_odds = f"{pot_odds_and_stacks[0]["pot_odds"]} %"
     rng = rng
     canvas.create_text(table_line1_x, table_line1_y, font=("Arial", 9, "bold"), text=table_line1)
     canvas.create_text(table_line2_x, table_line2_y, font=("Arial", 9), text=table_line2)
-    canvas.create_text(pot_odds_x, pot_odds_y, font=("Arial", 11, "bold"), text=pot_odds)
+    canvas.create_text(pot_x, pot_y, font=("Arial", 11, "bold"), text=pot)
+    canvas.create_text(pot_odds_x, pot_odds_y, font=("Arial", 10), text=pot_odds)
     canvas.create_text(510, 530, font=("Arial", 40), text="🎲")
     canvas.create_text(562, 533, font=("Arial", 30), text=rng)
     seats: list[Seat] = []
@@ -782,8 +784,10 @@ table_line1_x = oval_center_x
 table_line1_y = oval_center_y - 11
 table_line2_x = oval_center_x
 table_line2_y = oval_center_y + 11
+pot_x = oval_center_x
+pot_y = oval_center_y + 45
 pot_odds_x = oval_center_x
-pot_odds_y = oval_center_y + 45
+pot_odds_y = oval_center_y + 60
 
 current_progress_line1_x = current_progress_frame_width // 2
 current_progress_line1_y = (current_progress_frame_height // 5) + 1
