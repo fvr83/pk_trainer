@@ -691,8 +691,8 @@ def draw_table(canvas: tk. Canvas, combo, rng, positions_in_order, pot_odds_and_
     canvas.create_text(table_line2_x, table_line2_y, font=("Arial", 9), text=table_line2)
     canvas.create_text(pot_x, pot_y, font=("Arial", 11, "bold"), text=pot)
     canvas.create_text(pot_odds_x, pot_odds_y, font=("Arial", 10), text=pot_odds)
-    canvas.create_text(510, 530, font=("Arial", 40), text="🎲")
-    canvas.create_text(562, 533, font=("Arial", 30), text=rng)
+    canvas.create_text(rng_symbol_x, rng_symbol_y, font=("Arial", 40), text="🎲")
+    canvas.create_text(rng_value_x, rng_value_y, font=("Arial", 30), text=rng)
     seats: list[Seat] = []
     for i in range(8):
         seats.append(Seat(i, canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y, combo, positions_in_order, pot_odds_and_stacks, positions_actions))
@@ -715,7 +715,8 @@ def toggle_help(event=None):
     if help_visible:
         help_frame.place_forget()
     else:
-        help_frame.place(x=0, y=0)
+        help_frame.place(x=0, y=-2)
+        help_frame.lift()
 
     help_visible = not help_visible
 
@@ -726,7 +727,7 @@ def toggle_pool(event=None):
     if pool_visible:
         pool_frame.place_forget()
     else:
-        pool_frame.place(x=0, y=337)
+        pool_frame.place(x=0, y=333)
 
     pool_visible = not pool_visible
 
@@ -762,7 +763,7 @@ all_spots_result_dict = {}
 
 root = tk.Tk()
 root.title("Preflop")
-root_width, root_height = 1366, 707
+root_width, root_height = 1356, 667
 root.geometry(f"{root_width}x{root_height}+0+0")
 root.resizable(False, False)
 
@@ -774,18 +775,18 @@ options_menu.add_command(label="Analizer")
 options_menu.add_separator()
 options_menu.add_command(label="Quit", command=root.destroy)
 menu_bar.add_cascade(label="Options", menu=options_menu)
-
-main_frame_width, main_frame_height = 800, 707
+cut = 8
+main_frame_width, main_frame_height = 800, root_height
 table_frame_width = current_progress_frame_width = last_result_frame_width = actions_frame_width = main_frame_width
 current_progress_frame_height = 36
-table_frame_height = 560
+table_frame_height = 560 - cut
 actions_frame_height = 41
 last_result_frame_height = 70
-options_frame_width, options_frame_height = 240, root_height
+options_frame_width, options_frame_height = 232, root_height
 charts_frame_width, charts_frame_height = 326, root_height
 
 oval_center_x = (table_frame_width // 2) - 1
-oval_center_y = table_frame_height // 2 - 14
+oval_center_y = table_frame_height // 2 - 28 + (cut//2)
 oval_radius_x = 300
 oval_radius_y = 175
 
@@ -797,6 +798,12 @@ pot_x = oval_center_x
 pot_y = oval_center_y + 45
 pot_odds_x = oval_center_x
 pot_odds_y = oval_center_y + 60
+# canvas.create_text(510, 530, font=("Arial", 40), text="🎲")
+# canvas.create_text(562, 533, font=("Arial", 30), text=rng)
+rng_symbol_x = oval_center_x + 115
+rng_symbol_y = oval_center_y + 260
+rng_value_x = oval_center_x + 180
+rng_value_y = oval_center_y + 260
 
 current_progress_line1_x = current_progress_frame_width // 2
 current_progress_line1_y = (current_progress_frame_height // 5) + 1
@@ -804,9 +811,9 @@ current_progress_line2_x = current_progress_frame_width // 2
 current_progress_line2_y = current_progress_frame_height - 7
 
 last_result_line1_x = last_result_frame_width // 2
-last_result_line1_y = (last_result_frame_height // 8) - 1
+last_result_line1_y = (last_result_frame_height // 8) + 5
 last_result_line2_x = last_result_frame_width // 2
-last_result_line2_y = last_result_frame_height - 45
+last_result_line2_y = last_result_frame_height - 40
 
 bgd_color = "#515152"
 table_color = "#61cc4b"
@@ -840,7 +847,7 @@ possible_villains = ["None"]
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
 main_frame.pack(side="left", fill="both")
 
-current_progress_frame = tk.Frame(main_frame, width=current_progress_frame_width, height=current_progress_frame_height, bg="red")
+current_progress_frame = tk.Frame(main_frame, width=current_progress_frame_width, height=current_progress_frame_height, bg=bgd_color)
 current_progress_frame.pack(anchor="n", fill="both")
 cr_canvas = tk.Canvas(current_progress_frame, width=current_progress_frame_width, height=current_progress_frame_height, highlightthickness=0, bd=0, bg=bgd_color)
 cr_canvas.pack()
@@ -855,7 +862,7 @@ actions_frame.pack(anchor="n", fill="both", expand=True)
 btns_frame = tk.Frame(actions_frame, width=10, height=10, bg=bgd_color)
 btns_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-last_result_frame = tk.Frame(main_frame, width=last_result_frame_width, height=last_result_frame_height, bg="red")
+last_result_frame = tk.Frame(main_frame, width=last_result_frame_width, height=last_result_frame_height, bg=bgd_color)
 last_result_frame.pack(side="bottom", fill="both")
 lr_canvas = tk.Canvas(last_result_frame, width=last_result_frame_width, height=last_result_frame_height, highlightthickness=0, bd=0, bg=bgd_color)
 lr_canvas.pack()
@@ -872,19 +879,22 @@ user_entry = tk.Entry(user_frame, width=30, justify="center")
 user_entry.grid(row=1, column=0, columnspan=4)
 password_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="Password")
 password_label.grid(row=2, column=0, columnspan=4)
-password_entry = tk.Entry(user_frame, width=27, justify='center')
+password_entry = tk.Entry(user_frame, width=26, justify='center')
 password_entry.config(show="*")
 password_entry.grid(row=3, column=0, columnspan=4, sticky='w')
 show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁", cursor="hand2")
-show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(5,0))
-login_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="LOGIN")
-login_button.grid(row=4, column=0, pady=(2,0), padx=(0,1))
-logout_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="LOGOUT")
-logout_button.grid(row=4, column=1, pady=(2,0), padx=(0,1))
-add_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="ADD USR")
-add_usr_button.grid(row=4, column=2, pady=(2,0), padx=(0,1))
-del_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="DEL USR")
-del_usr_button.grid(row=4, column=3, pady=(2,0))
+show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(0,10))
+
+login_btns_frame = tk.Frame(options_frame)
+login_btns_frame.place(relx=0.5, rely=0.16, anchor="center")
+login_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGIN", font=("Arial1", 9))
+login_button.pack(side="left")
+logout_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGOUT", font=("Arial1", 9))
+logout_button.pack(side="left")
+add_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="ADD USR", font=("Arial1", 9))
+add_usr_button.pack(side="left")
+del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial1", 9))
+del_usr_button.pack(side="left")
 
 login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 login_status_frame.place(relx=0.5, rely=0.174, anchor="center")
@@ -947,20 +957,20 @@ pause_each_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
 show_rtresults_frame.place(relx=0.5, rely=0.77, anchor="center")
-sh_part_res_check_btn = tk.Checkbutton(show_rtresults_frame, highlightthickness=0, variable=show_part_results, text="Show partial results", foreground="white", selectcolor="black", bg=bgd_color)
+sh_part_res_check_btn = tk.Checkbutton(show_rtresults_frame, bd=0, highlightthickness=0, variable=show_part_results, text="Show partial results", foreground="white", selectcolor="black", bg=bgd_color)
 sh_part_res_check_btn.pack()
-sh_curr_res_check_btn = tk.Checkbutton(show_rtresults_frame, highlightthickness=0, variable=show_curr_results, text="Show last hand result", foreground="white", selectcolor="black", bg=bgd_color)
+sh_curr_res_check_btn = tk.Checkbutton(show_rtresults_frame, bd=0, highlightthickness=0, variable=show_curr_results, text="Show last hand result", foreground="white", selectcolor="black", bg=bgd_color)
 sh_curr_res_check_btn.pack()
 
 help_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-help_pool_frame.place(relx=0.51, rely=0.84, anchor="center")
+help_pool_frame.place(relx=0.51, rely=0.845, anchor="center")
 h_key_label = tk.Label(help_pool_frame, pady=0, text="<h> - HELP", font=("Arial", 10))
 h_key_label.pack(side='left', padx=(0,5))
 p_key_label = tk.Label(help_pool_frame, pady=0, text="<p> - POOL", font=("Arial", 10))
 p_key_label.pack(side='right', padx=(5,0))
 
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-start_stop_btns_frame.place(relx=0.51, rely=0.875, anchor="center")
+start_stop_btns_frame.place(relx=0.51, rely=0.8847, anchor="center")
 start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START", command=start_trainer)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
 pause_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="PAUSE", command=pause_trainer)
@@ -969,16 +979,15 @@ stop_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, tex
 stop_trainer_buttom.grid(row=0, column=2)
 
 status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
-status_frame.place(relx=0.5, rely=0.91, anchor="center")
-status_label = tk.Label(status_frame, bg=bgd_color, text="STOPPED", foreground="white", font=("Arial", 12, "bold"))
+status_frame.place(relx=0.5, rely=0.9158, anchor="center")
+status_label = tk.Label(status_frame, bd=0, bg=bgd_color, text="STOPPED", foreground="white", font=("Arial", 12, "bold"))
 status_label.pack()
 
-clock_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
-clock_frame.place(relx=0.5, rely=0.935, anchor="center")
-clock_frame.pack_propagate(False)
-clock_check_btn = tk.Checkbutton(clock_frame, highlightthickness=0, command=show_clock, variable=clock_var, text="show clock", foreground="white", selectcolor="black", bg=bgd_color)
+clock_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color, bd=0, pady=0, highlightthickness=0)
+clock_frame.place(relx=0.5, rely=0.94, anchor="center")
+clock_check_btn = tk.Checkbutton(clock_frame, bd=0, highlightthickness=0, command=show_clock, variable=clock_var, text="show clock", foreground="white", selectcolor="black", bg=bgd_color)
 clock_check_btn.pack(side="left")
-clock_label = tk.Label(clock_frame, width=16, font=("Consolas", 12), foreground="white", bg=bgd_color)
+clock_label = tk.Label(clock_frame, width=16, bd=0, font=("Consolas", 12), foreground="white", bg=bgd_color)
 clock_label.pack(side="left")
 
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)

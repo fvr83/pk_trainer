@@ -104,13 +104,15 @@ class Seat():
             self.canvas.create_text(((left + right) / 2) + value_x_offset, ((top + bottom) / 2) + value_y_offset, text=rank, font=("Impact", 70), fill=color)
 
 
-    def draw_hidden_cards(self):
+    def draw_hidden_cards(self, index):
         gap = 2
         total_width = self.cards_width
         card_width = (total_width - gap) // 2
         card_height = int(card_width * 1.36)
         x0 = self.cards_center_x - total_width / 2
         y0 = self.cards_center_y - card_height / 2
+        if index == 4:
+            y0 += 10
         for i in range(2):
             left = x0 + i * (card_width + gap)
             top = y0
@@ -147,6 +149,6 @@ class Seat():
         self.canvas.create_text(self.stack_center_x, self.stack_center_y, font=("Arial", 10, "bold"), text=self.stack)
         self.canvas.create_text(self.bet_center_x, self.bet_center_y, font=("Arial", 9, "bold"), text=self.bet)
         if self.index != 0 and self.action != "Fold":
-            self.draw_hidden_cards()
+            self.draw_hidden_cards(self.index)
         elif self.index == 0:
             self.draw_hero_cards(combo)
