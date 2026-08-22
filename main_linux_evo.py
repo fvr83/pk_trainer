@@ -942,7 +942,7 @@ extr_opt_frame = tk.Frame(options_frame, width=options_frame_width)
 extr_opt_frame.place(relx=0.5, rely=0.711, anchor="center")
 pause_each_label = tk.Label(extr_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 13, "bold"))
 pause_each_label.pack(side="left")
-pause_each_dropdown = ttk.Combobox(extr_opt_frame, justify="center", textvariable=pause_each_var, values=["never", "wrong", "imprecise/wrong", "right/imprecise/wrong", "imprecise", "right/wrong", "right/imprecise", "right"], width=18, state="readonly", height=5)
+pause_each_dropdown = ttk.Combobox(extr_opt_frame, background=bgd_color, justify="center", textvariable=pause_each_var, values=["never", "wrong", "imprecise/wrong", "right/imprecise/wrong", "imprecise", "right/wrong", "right/imprecise", "right"], width=18, state="readonly", height=5)
 pause_each_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
