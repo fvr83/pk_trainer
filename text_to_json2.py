@@ -18,7 +18,7 @@ for path in Path(folder).iterdir():
         # print(file_name)
         content = f.read()
         # print(content)
-    if "_17bb" not in file_name:
+    if "_16bb" not in file_name:
         
         continue
     limp = None
