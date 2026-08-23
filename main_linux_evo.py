@@ -289,7 +289,7 @@ def start_trainer():
     cr_canvas.delete("all")
     if spots_listbox.size() == 0:
         add_solution()
-    status_label.after(150, lambda: status_label.config(text="TRAINING"))
+    status_label.after(150, lambda: status_label.config(text="TRAINING", fg=training_color))
     training = True
     all_spots_result_dict = {}
     result_dict = {"hands_played": 0, "total_freq_points": 0, "ev_loss": 0, "total_ev": 0, "right_hands_count": 0, "imprecise_hands_count": 0, "wrong_hands_count": 0, "accuracy": 0, 
@@ -440,10 +440,10 @@ def pause_trainer():
         pause_trainer_buttom.config(text="PAUSE")
         paused = False
         paused_time += time.time() - pause_started
-        status_label.config(text="TRAINING")
+        status_label.config(text="TRAINING", fg=training_color)
     else:
         paused = True
-        status_label.config(text="PAUSED")
+        status_label.config(text="PAUSED", fg=paused_color)
         pause_started = time.time()
         pause_trainer_buttom.config(text="CONTINUE")
 
@@ -541,7 +541,7 @@ def stop_trainer():
     elapsed_str = format_time(end_time - start_time)
     date_str = f"{date_time_1}{date_time_2} | {elapsed_str}"
     training = False
-    status_label.config(text="STOPPED")
+    status_label.config(text="STOPPED", fg=stopped_color)
     start_trainer_buttom.config(text="START")
 
     if result_frame is not None:
@@ -819,6 +819,9 @@ bgd_color = "#515152"
 table_color = "#61cc4b"
 btn_color = "#F39508"
 position_color = "#E9E9E9"
+stopped_color = "#f76969"
+training_color = "#36ff04"
+paused_color = "#eafc4b"
 
 folder_var = tk.StringVar(root, value="json_results")
 depth_var = tk.StringVar(root, value="50")
@@ -830,7 +833,10 @@ combo_pool_var_1 = tk.StringVar(root, value="0")
 combo_pool_var_2 = tk.StringVar(root, value="0")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=True)
-pause_each_var = tk.StringVar(value="never")
+freeze_var = tk.StringVar(value="never")
+show_results_var = tk.StringVar(value="results")
+dealing_options_var = tk.StringVar(value="per combo")
+precision_var = tk.StringVar(value="precise")
 limit_type_var = tk.StringVar(root, value="hands")
 limit_value_var = tk.StringVar(root, value="inf")
 show_part_results = tk.BooleanVar(value=True)
@@ -843,6 +849,10 @@ spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3b
 combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
 limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
+precisions = ["precise", "simple", "any right"]
+dealing_options = ['per combo', 'per hand']
+freeze_options = ["never", "wrong", "imprecise/wrong", "right/imprecise/wrong", "imprecise", "right/wrong", "right/imprecise", "right"]
+show_results_option = ["results", "current", "last", "none"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
 main_frame.pack(side="left", fill="both")
@@ -872,7 +882,7 @@ options_frame.pack(side="left")
 options_frame.pack_propagate(False)
 
 user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-user_frame.place(relx=0.5, rely=0.075, anchor="center")
+user_frame.place(relx=0.5, rely=0.06, anchor="center")
 user_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="User")
 user_label.grid(row=0, column=0, columnspan=4)
 user_entry = tk.Entry(user_frame, width=30, justify="center")
@@ -885,24 +895,24 @@ password_entry.grid(row=3, column=0, columnspan=4, sticky='w')
 show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁", cursor="hand2")
 show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(0,10))
 
-login_btns_frame = tk.Frame(options_frame)
-login_btns_frame.place(relx=0.5, rely=0.16, anchor="center")
+login_btns_frame = tk.Frame(options_frame, bg=bgd_color)
+login_btns_frame.place(relx=0.5, rely=0.15, anchor="center")
 login_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGIN", font=("Arial1", 9))
-login_button.pack(side="left")
+login_button.grid(row=0, column=0)
 logout_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGOUT", font=("Arial1", 9))
-logout_button.pack(side="left")
+logout_button.grid(row=0, column=1, padx=(5, 5))
 add_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="ADD USR", font=("Arial1", 9))
-add_usr_button.pack(side="left")
+add_usr_button.grid(row=0, column=2, padx=(0,5))
 del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial1", 9))
-del_usr_button.pack(side="left")
+del_usr_button.grid(row=0, column=3)
 
 login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-login_status_frame.place(relx=0.5, rely=0.174, anchor="center")
+login_status_frame.place(relx=0.5, rely=0.185, anchor="center")
 login_status_label = tk.Label(login_status_frame, fg='white', bg=bgd_color, pady=0, text="Login before start.", justify="center")
 login_status_label.pack()
 
 dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-dropdowns_frame.place(relx=0.5, rely=0.24, anchor="center")
+dropdowns_frame.place(relx=0.5, rely=0.25, anchor="center")
 depth_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=depth_var, values=depths, width=4, state="readonly", height=20)
 depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=0)
 hero_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=hero_position_var, values=positions, width=5, state="readonly", height=10)
@@ -919,12 +929,12 @@ spot_action_entry_2 = ttk.Combobox(dropdowns_frame, justify="center", textvariab
 spot_action_entry_2.grid(row=2, column=2, sticky="e", padx=0, pady=0)
 
 edit_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-edit_pool_frame.place(relx=0.5, rely=0.311, anchor="center")
+edit_pool_frame.place(relx=0.5, rely=0.33, anchor="center")
 edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL")
 edit_pool_button.pack()
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-solutions_btns_frame.place(relx=0.5, rely=0.346, anchor="center")
+solutions_btns_frame.place(relx=0.5, rely=0.37, anchor="center")
 add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT", command=add_solution)
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
 del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT", command=delete_solution)
@@ -933,44 +943,58 @@ del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL
 del_all_buttom.grid(row=3, column=2, pady=0)
 
 listbox_frame = tk.Frame(options_frame, width=options_frame_width)
-listbox_frame.place(relx=0.5, rely=0.51, anchor="center")
+listbox_frame.place(relx=0.5, rely=0.55, anchor="center")
 scrollbar = tk.Scrollbar(listbox_frame, orient="vertical")
 scrollbar.pack(side="right", fill="y")
 spots_listbox = tk.Listbox(listbox_frame, width=27, height=10, yscrollcommand=scrollbar.set)
 spots_listbox.pack(side="left")
 
+dealing_opt_frame = tk.Frame(options_frame, width=options_frame_width)
+dealing_opt_frame.place(relx=0.5, rely=0.723, anchor="center")
+dealing_opt_label = tk.Label(dealing_opt_frame, fg="white", bg=bgd_color, text="DEALING:", font=("Arial", 12, "bold"))
+dealing_opt_label.pack(side="left")
+dealing_opt_dropdown = ttk.Combobox(dealing_opt_frame, background=bgd_color, justify="center", textvariable=dealing_options_var, values=dealing_options, width=10, state="readonly", height=5)
+dealing_opt_dropdown.pack(side="left")
+
+precision_frame = tk.Frame(options_frame, width=options_frame_width)
+precision_frame.place(relx=0.5, rely=0.758, anchor="center")
+precision_label = tk.Label(precision_frame, fg="white", bg=bgd_color, text="PRECISION:", font=("Arial", 12, "bold"))
+precision_label.pack(side="left")
+precision_dropdown = ttk.Combobox(precision_frame, background=bgd_color, justify="center", textvariable=precision_var, values=precisions, width=8, state="readonly", height=5)
+precision_dropdown.pack(side="left")
+
 limits_frame = tk.Frame(options_frame, width=options_frame_width, background=bgd_color)
-limits_frame.place(relx=0.5, rely=0.675, anchor="center")
-limit_label = tk.Label(limits_frame, fg='white', bg=bgd_color, pady=0, text="LIMIT:", font=("Arial", 13, "bold"))
+limits_frame.place(relx=0.5, rely=0.795, anchor="center")
+limit_label = tk.Label(limits_frame, fg='white', bg=bgd_color, pady=0, text="LIMIT:", font=("Arial", 12, "bold"))
 limit_label.pack(side="left")
 combo_pool_type_dropdown = ttk.Combobox(limits_frame, justify="center", textvariable=limit_type_var, values=limits_types, width=7, state="readonly", height=5)
 combo_pool_type_dropdown.pack(side="left")
 limit_value_entry = tk.Entry(limits_frame, textvariable=limit_value_var, width=5, justify='center')
 limit_value_entry.pack(side="left")
 
-extr_opt_frame = tk.Frame(options_frame, width=options_frame_width)
-extr_opt_frame.place(relx=0.5, rely=0.711, anchor="center")
-pause_each_label = tk.Label(extr_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 13, "bold"))
-pause_each_label.pack(side="left")
-pause_each_dropdown = ttk.Combobox(extr_opt_frame, background=bgd_color, justify="center", textvariable=pause_each_var, values=["never", "wrong", "imprecise/wrong", "right/imprecise/wrong", "imprecise", "right/wrong", "right/imprecise", "right"], width=18, state="readonly", height=5)
-pause_each_dropdown.pack(side="left")
+freeze_opt_frame = tk.Frame(options_frame, width=options_frame_width)
+freeze_opt_frame.place(relx=0.5, rely=0.83, anchor="center")
+freeze_label = tk.Label(freeze_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 12, "bold"))
+freeze_label.pack(side="left")
+freeze_dropdown = ttk.Combobox(freeze_opt_frame, background=bgd_color, justify="center", textvariable=freeze_var, values=freeze_options, width=18, state="readonly", height=5)
+freeze_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
-show_rtresults_frame.place(relx=0.5, rely=0.77, anchor="center")
-sh_part_res_check_btn = tk.Checkbutton(show_rtresults_frame, bd=0, highlightthickness=0, variable=show_part_results, text="Show partial results", foreground="white", selectcolor="black", bg=bgd_color)
-sh_part_res_check_btn.pack()
-sh_curr_res_check_btn = tk.Checkbutton(show_rtresults_frame, bd=0, highlightthickness=0, variable=show_curr_results, text="Show last hand result", foreground="white", selectcolor="black", bg=bgd_color)
-sh_curr_res_check_btn.pack()
+show_rtresults_frame.place(relx=0.5, rely=0.865, anchor="center")
+show_rtresults_label = tk.Label(show_rtresults_frame, fg="white", bg=bgd_color, text="RT SHOW:", font=("Arial", 12, "bold"))
+show_rtresults_label.pack(side="left")
+show_rtresults_dropdown = ttk.Combobox(show_rtresults_frame, background=bgd_color, justify="center", textvariable=show_results_var, values=show_results_option, width=8, state="readonly", height=5)
+show_rtresults_dropdown.pack(side="left")
 
 help_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-help_pool_frame.place(relx=0.51, rely=0.845, anchor="center")
+help_pool_frame.place(relx=0.51, rely=0.898, anchor="center")
 h_key_label = tk.Label(help_pool_frame, pady=0, text="<h> - HELP", font=("Arial", 10))
 h_key_label.pack(side='left', padx=(0,5))
 p_key_label = tk.Label(help_pool_frame, pady=0, text="<p> - POOL", font=("Arial", 10))
 p_key_label.pack(side='right', padx=(5,0))
 
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-start_stop_btns_frame.place(relx=0.51, rely=0.8847, anchor="center")
+start_stop_btns_frame.place(relx=0.51, rely=0.93, anchor="center")
 start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START", command=start_trainer)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
 pause_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="PAUSE", command=pause_trainer)
@@ -979,12 +1003,13 @@ stop_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, tex
 stop_trainer_buttom.grid(row=0, column=2)
 
 status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
-status_frame.place(relx=0.5, rely=0.9158, anchor="center")
-status_label = tk.Label(status_frame, bd=0, bg=bgd_color, text="STOPPED", foreground="white", font=("Arial", 12, "bold"))
+status_frame.place(relx=0.5, rely=0.9632, anchor="center")
+status_label = tk.Label(status_frame, bd=0, bg=bgd_color, text="STOPPED", foreground=stopped_color, font=("Arial", 12, "bold"))
 status_label.pack()
 
 clock_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color, bd=0, pady=0, highlightthickness=0)
-clock_frame.place(relx=0.5, rely=0.94, anchor="center")
+clock_frame.place(relx=0.5, rely=0.99, anchor="center")
+clock_frame.pack_propagate(False)
 clock_check_btn = tk.Checkbutton(clock_frame, bd=0, highlightthickness=0, command=show_clock, variable=clock_var, text="show clock", foreground="white", selectcolor="black", bg=bgd_color)
 clock_check_btn.pack(side="left")
 clock_label = tk.Label(clock_frame, width=16, bd=0, font=("Consolas", 12), foreground="white", bg=bgd_color)
@@ -998,7 +1023,6 @@ help_label.pack()
 pool_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
 pool_label = tk.Label(pool_frame, bd=0)
 pool_label.pack()
-
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
