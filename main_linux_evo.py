@@ -811,7 +811,7 @@ current_progress_line2_x = current_progress_frame_width // 2
 current_progress_line2_y = current_progress_frame_height - 7
 
 last_result_line1_x = last_result_frame_width // 2
-last_result_line1_y = (last_result_frame_height // 8) + 5
+last_result_line1_y = (last_result_frame_height // 8) + 4
 last_result_line2_x = last_result_frame_width // 2
 last_result_line2_y = last_result_frame_height - 40
 
@@ -833,7 +833,7 @@ combo_pool_var_1 = tk.StringVar(root, value="0")
 combo_pool_var_2 = tk.StringVar(root, value="0")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=True)
-freeze_var = tk.StringVar(value="never")
+freeze_var = tk.StringVar(value="always")
 show_results_var = tk.StringVar(value="results")
 dealing_options_var = tk.StringVar(value="per combo")
 precision_var = tk.StringVar(value="precise")
@@ -851,7 +851,7 @@ limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
 precisions = ["precise", "simple", "any right"]
 dealing_options = ['per combo', 'per hand']
-freeze_options = ["never", "wrong", "imprecise/wrong", "right/imprecise/wrong", "imprecise", "right/wrong", "right/imprecise", "right"]
+freeze_options = ["always", "wrong", "imprecise/wrong", "never", "imprecise", "right/wrong", "right/imprecise", "right"]
 show_results_option = ["results", "current", "last", "none"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
@@ -949,14 +949,14 @@ scrollbar.pack(side="right", fill="y")
 spots_listbox = tk.Listbox(listbox_frame, width=27, height=10, yscrollcommand=scrollbar.set)
 spots_listbox.pack(side="left")
 
-dealing_opt_frame = tk.Frame(options_frame, width=options_frame_width)
+dealing_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 dealing_opt_frame.place(relx=0.5, rely=0.723, anchor="center")
 dealing_opt_label = tk.Label(dealing_opt_frame, fg="white", bg=bgd_color, text="DEALING:", font=("Arial", 12, "bold"))
 dealing_opt_label.pack(side="left")
 dealing_opt_dropdown = ttk.Combobox(dealing_opt_frame, background=bgd_color, justify="center", textvariable=dealing_options_var, values=dealing_options, width=10, state="readonly", height=5)
 dealing_opt_dropdown.pack(side="left")
 
-precision_frame = tk.Frame(options_frame, width=options_frame_width)
+precision_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 precision_frame.place(relx=0.5, rely=0.758, anchor="center")
 precision_label = tk.Label(precision_frame, fg="white", bg=bgd_color, text="PRECISION:", font=("Arial", 12, "bold"))
 precision_label.pack(side="left")
@@ -972,11 +972,11 @@ combo_pool_type_dropdown.pack(side="left")
 limit_value_entry = tk.Entry(limits_frame, textvariable=limit_value_var, width=5, justify='center')
 limit_value_entry.pack(side="left")
 
-freeze_opt_frame = tk.Frame(options_frame, width=options_frame_width)
+freeze_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 freeze_opt_frame.place(relx=0.5, rely=0.83, anchor="center")
 freeze_label = tk.Label(freeze_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 12, "bold"))
 freeze_label.pack(side="left")
-freeze_dropdown = ttk.Combobox(freeze_opt_frame, background=bgd_color, justify="center", textvariable=freeze_var, values=freeze_options, width=18, state="readonly", height=5)
+freeze_dropdown = ttk.Combobox(freeze_opt_frame, background=bgd_color, justify="center", textvariable=freeze_var, values=freeze_options, width=15, state="readonly", height=5)
 freeze_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
@@ -1018,15 +1018,16 @@ clock_label.pack(side="left")
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
 charts_frame.pack(side="left")
 help_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
-help_label = tk.Label(help_frame, bd=0, bg=bgd_color)
+help_label = tk.Label(help_frame, bd=0, pady=0)
 help_label.pack()
 pool_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
-pool_label = tk.Label(pool_frame, bd=0)
+pool_label = tk.Label(pool_frame, bd=0, pady=0)
 pool_label.pack()
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
 spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
+hero_position_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
 h_key_label.bind("<Button-1>", toggle_help)
 p_key_label.bind("<Button-1>", toggle_pool)
 show_password.bind("<ButtonPress-1>", show_password_press)
