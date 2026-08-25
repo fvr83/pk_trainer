@@ -841,6 +841,7 @@ limit_type_var = tk.StringVar(root, value="hands")
 limit_value_var = tk.StringVar(root, value="inf")
 show_part_results = tk.BooleanVar(value=True)
 show_curr_results = tk.BooleanVar(value=True)
+roles_var = tk.StringVar(value="custom")
 
 depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 one_to_hundred = [i for i in range(101)]
@@ -853,6 +854,7 @@ precisions = ["precise", "simple", "any right"]
 dealing_options = ['per combo', 'per hand']
 freeze_options = ["always", "wrong", "imprecise/wrong", "never", "imprecise", "right/wrong", "right/imprecise", "right"]
 show_results_option = ["results", "current", "last", "none"]
+roles_options = ["custom", "focus"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
 main_frame.pack(side="left", fill="both")
@@ -943,28 +945,35 @@ del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL
 del_all_buttom.grid(row=3, column=2, pady=0)
 
 listbox_frame = tk.Frame(options_frame, width=options_frame_width)
-listbox_frame.place(relx=0.5, rely=0.55, anchor="center")
+listbox_frame.place(relx=0.5, rely=0.515, anchor="center")
 scrollbar = tk.Scrollbar(listbox_frame, orient="vertical")
 scrollbar.pack(side="right", fill="y")
-spots_listbox = tk.Listbox(listbox_frame, width=27, height=10, yscrollcommand=scrollbar.set)
+spots_listbox = tk.Listbox(listbox_frame, width=27, height=8, yscrollcommand=scrollbar.set)
 spots_listbox.pack(side="left")
 
+roles_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+roles_frame.place(relx=0.5, rely=0.665, anchor="center")
+roles_label = tk.Label(roles_frame, fg="white", bg=bgd_color, text="ROLE:", font=("Arial", 12, "bold"))
+roles_label.pack(side="left")
+roles_dropdown = ttk.Combobox(roles_frame, background=bgd_color, justify="center", textvariable=roles_var, values=roles_options, width=10, state="readonly", height=5)
+roles_dropdown.pack(side="left")
+
 dealing_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-dealing_opt_frame.place(relx=0.5, rely=0.723, anchor="center")
+dealing_opt_frame.place(relx=0.5, rely=0.705, anchor="center")
 dealing_opt_label = tk.Label(dealing_opt_frame, fg="white", bg=bgd_color, text="DEALING:", font=("Arial", 12, "bold"))
 dealing_opt_label.pack(side="left")
 dealing_opt_dropdown = ttk.Combobox(dealing_opt_frame, background=bgd_color, justify="center", textvariable=dealing_options_var, values=dealing_options, width=10, state="readonly", height=5)
 dealing_opt_dropdown.pack(side="left")
 
 precision_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-precision_frame.place(relx=0.5, rely=0.758, anchor="center")
+precision_frame.place(relx=0.5, rely=0.744, anchor="center")
 precision_label = tk.Label(precision_frame, fg="white", bg=bgd_color, text="PRECISION:", font=("Arial", 12, "bold"))
 precision_label.pack(side="left")
 precision_dropdown = ttk.Combobox(precision_frame, background=bgd_color, justify="center", textvariable=precision_var, values=precisions, width=8, state="readonly", height=5)
 precision_dropdown.pack(side="left")
 
 limits_frame = tk.Frame(options_frame, width=options_frame_width, background=bgd_color)
-limits_frame.place(relx=0.5, rely=0.795, anchor="center")
+limits_frame.place(relx=0.5, rely=0.784, anchor="center")
 limit_label = tk.Label(limits_frame, fg='white', bg=bgd_color, pady=0, text="LIMIT:", font=("Arial", 12, "bold"))
 limit_label.pack(side="left")
 combo_pool_type_dropdown = ttk.Combobox(limits_frame, justify="center", textvariable=limit_type_var, values=limits_types, width=7, state="readonly", height=5)
@@ -973,25 +982,25 @@ limit_value_entry = tk.Entry(limits_frame, textvariable=limit_value_var, width=5
 limit_value_entry.pack(side="left")
 
 freeze_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-freeze_opt_frame.place(relx=0.5, rely=0.83, anchor="center")
+freeze_opt_frame.place(relx=0.5, rely=0.824, anchor="center")
 freeze_label = tk.Label(freeze_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 12, "bold"))
 freeze_label.pack(side="left")
 freeze_dropdown = ttk.Combobox(freeze_opt_frame, background=bgd_color, justify="center", textvariable=freeze_var, values=freeze_options, width=15, state="readonly", height=5)
 freeze_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
-show_rtresults_frame.place(relx=0.5, rely=0.865, anchor="center")
+show_rtresults_frame.place(relx=0.5, rely=0.864, anchor="center")
 show_rtresults_label = tk.Label(show_rtresults_frame, fg="white", bg=bgd_color, text="RT SHOW:", font=("Arial", 12, "bold"))
 show_rtresults_label.pack(side="left")
 show_rtresults_dropdown = ttk.Combobox(show_rtresults_frame, background=bgd_color, justify="center", textvariable=show_results_var, values=show_results_option, width=8, state="readonly", height=5)
 show_rtresults_dropdown.pack(side="left")
 
 help_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-help_pool_frame.place(relx=0.51, rely=0.898, anchor="center")
-h_key_label = tk.Label(help_pool_frame, pady=0, text="<h> - HELP", font=("Arial", 10))
-h_key_label.pack(side='left', padx=(0,5))
-p_key_label = tk.Label(help_pool_frame, pady=0, text="<p> - POOL", font=("Arial", 10))
-p_key_label.pack(side='right', padx=(5,0))
+help_pool_frame.place(relx=0.51, rely=0.8974, anchor="center")
+h_key_label = tk.Label(help_pool_frame, pady=0, text="<h> - HELP", font=("Arial", 9))
+h_key_label.pack(side='left', pady=0, padx=(0,5))
+p_key_label = tk.Label(help_pool_frame, pady=0, text="<p> - POOL", font=("Arial", 9))
+p_key_label.pack(side='right', pady=0, padx=(5,0))
 
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 start_stop_btns_frame.place(relx=0.51, rely=0.93, anchor="center")
