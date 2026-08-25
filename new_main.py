@@ -46,6 +46,7 @@ def load_database():
                 date TEXT NOT NULL,
                 start_time TEXT NOT NULL,
                 end_time TEXT,
+                combos_pool TEXT,
                 hands_trained INTEGER DEFAULT 0,
                 right_hands INTEGER DEFAULT 0,
                 imprecise_hands INTEGER DEFAULT 0,
@@ -238,6 +239,8 @@ def login(root, username, password):
         password_entry.delete(0, tk.END)
         password_entry.config(state="disabled")
         user_entry.config(state="disabled")
+        add_usr_button.config(state="disabled")
+        del_usr_button.config(state="disabled")
     except sqlite3.Error as error:
         messagebox.showerror("Database error", f"Could not access the database.\n\n{error}", parent=root)
     finally:
@@ -253,6 +256,8 @@ def logout():
     user_entry.delete(0, tk.END)
     password_entry.config(state="normal")
     login_status_label.config(text="Login before start.")
+    add_usr_button.config(state="normal")
+    del_usr_button.config(state="normal")
 
 
 
@@ -444,7 +449,6 @@ possible_villains = ["None"]
 # ===================================
 # ------- MAIN ROOT -------
 # ===================================
-
 root = tk.Tk()
 root.title("Preflop Trainer")
 root.geometry(f"{root_width}x{root_height}+0+0")
@@ -539,29 +543,31 @@ choosen_spots_frame = tk.Frame(options_frame, width=options_frame_width)
 choosen_spots_frame.place(relx=0.5, rely=0.515, anchor="center")
 scrollbar = tk.Scrollbar(choosen_spots_frame, orient="vertical")
 scrollbar.pack(side="right", fill="y")
-choosen_spots_list = ttk.Treeview(choosen_spots_frame, height=8, columns=("col1", "col2", "col3", "col4"))
+choosen_spots_list = ttk.Treeview(choosen_spots_frame, height=7, columns=("col1", "col2", "col3", "col4"))
 choosen_spots_list.heading("#0", text="")
 choosen_spots_list.heading("#1", text="bb")
 choosen_spots_list.heading("#2", text="HERO")
-choosen_spots_list.heading("#3", text="VILLAIN")
+choosen_spots_list.heading("#3", text="VIL.")
 choosen_spots_list.heading("#4", text="SPOT")
 choosen_spots_list.column("#0", width=1, stretch=tk.NO)
-choosen_spots_list.column("#1", width=26)
-choosen_spots_list.column("#2", width=36)
-choosen_spots_list.column("#3", width=50)
-choosen_spots_list.column("#4", width=50)
+choosen_spots_list.column("#1", width=31)
+choosen_spots_list.column("#2", width=40)
+choosen_spots_list.column("#3", width=40)
+choosen_spots_list.column("#4", width=106)
 choosen_spots_list.pack(side="left")
 
-choosen_spots_list.insert("", "end", values=("200", "UTG1", "UTG1", "RFI"))
-choosen_spots_list.insert("", "end", values=("20", "CO", "BB", "RFI"))
-choosen_spots_list.insert("", "end", values=("50", "BTN", "BB", "3BET"))
-choosen_spots_list.insert("", "end", values=("1", "SB", "BB", "RFI"))
-choosen_spots_list.insert("", "end", values=("5", "UTG", "MP", "OPEN"))
-
 # CHARTS FRAME
-charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg='#ffffff')
+charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
 charts_frame.pack(side="left", fill='both')
 
+help_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
+help_label = tk.Label(help_frame, bd=0, pady=0)
+help_label.pack()
+pool_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
+pool_label = tk.Label(pool_frame, bd=0, pady=0)
+pool_label.pack()
+
+#BINDS
 show_password.bind("<ButtonPress-1>", show_password_press)
 show_password.bind("<ButtonRelease-1>", show_password_release)
 show_password.bind("<Leave>", show_password_leave)

@@ -1057,7 +1057,7 @@ pool_label.pack()
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
-spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
+spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: (get_possible_villains()))
 hero_position_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
 h_key_label.bind("<Button-1>", toggle_help)
 p_key_label.bind("<Button-1>", toggle_pool)
