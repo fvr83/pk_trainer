@@ -3,136 +3,127 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import re
 import bcrypt
+from tkinter import ttk
 
 
 
 # ===================================
 # ------- SQL FUNCTIONS -------
 # ===================================
-
 def load_database():
     conn = sqlite3.connect(database_file)
     conn.execute("PRAGMA foreign_keys = ON")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL UNIQUE,
-            name TEXT,
-            str_name TEXT,
-            str_num TEXT,
-            adr_ln2 TEXT,
-            neighborhood TEXT,
-            p_code TEXT,
-            city TEXT,
-            country TEXT,
-            email TEXT,
-            personal_id TEXT,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS trainings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            date TEXT NOT NULL,
-            start_time TEXT NOT NULL,
-            end_time TEXT,
-            hands_trained INTEGER DEFAULT 0,
-            right_hands INTEGER DEFAULT 0,
-            imprecise_hands INTEGER DEFAULT 0,
-            wrong_hands INTEGER DEFAULT 0,
-            train_accuracy REAL,
-            train_ev_loss REAL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS hands (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            training_id INTEGER NOT NULL,
-            spot TEXT,
-            combo TEXT,
-            hand TEXT,
-            user_decision TEXT,
-            correct_decision TEXT,
-            evaluation TEXT,
-            decision_time REAL,
-            accuracy REAL,
-            ev_loss REAL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-            FOREIGN KEY (training_id) REFERENCES trainings(id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_hands_user_id
-        ON hands(user_id)
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_hands_training_id
-        ON hands(training_id)
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            action TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                name TEXT,
+                str_name TEXT,
+                str_num TEXT,
+                adr_ln2 TEXT,
+                neighborhood TEXT,
+                p_code TEXT,
+                city TEXT,
+                country TEXT,
+                email TEXT,
+                personal_id TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS trainings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                date TEXT NOT NULL,
+                start_time TEXT NOT NULL,
+                end_time TEXT,
+                hands_trained INTEGER DEFAULT 0,
+                right_hands INTEGER DEFAULT 0,
+                imprecise_hands INTEGER DEFAULT 0,
+                wrong_hands INTEGER DEFAULT 0,
+                train_accuracy REAL,
+                train_ev_loss REAL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS hands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                training_id INTEGER NOT NULL,
+                spot TEXT,
+                combo TEXT,
+                hand TEXT,
+                user_decision TEXT,
+                correct_decision TEXT,
+                evaluation TEXT,
+                decision_time REAL,
+                accuracy REAL,
+                ev_loss REAL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY (training_id) REFERENCES trainings(id)
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_hands_user_id
+            ON hands(user_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_hands_training_id
+            ON hands(training_id)
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                date TEXT NOT NULL,
+                time TEXT NOT NULL,
+                action TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def add_user(top_level, user_name: str, password, password_conf, name, str_name, str_num, adr_ln2, neighborhood, p_code, city, country, email, personal_id):
     user_name = user_name.strip().lower()
     if not user_name or not password or not password_conf:
         messagebox.showwarning("Required fields", "Username, password and password confirmation are required.", parent=top_level)
-
         return
     if not 3 <= len(user_name) <= 30:
         messagebox.showwarning("Invalid username", "Username must contain between 3 and 30 characters.", parent=top_level)
-
         return
     if not re.fullmatch(r"[A-Za-z0-9_]+", user_name):
         messagebox.showwarning("Invalid username", "Username may contain only letters, numbers and underscores.", parent=top_level)
-
         return
-    if len(password) < 6:
+    if len(password) < 8:
         messagebox.showwarning("Invalid password", "Password must contain at least 8 characters.", parent=top_level)
-
         return
     if password != password_conf:
         messagebox.showwarning("Password mismatch", "Password and password confirmation do not match.", parent=top_level)
-
         return
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
     conn = sqlite3.connect(database_file)
-    cursor = conn.cursor()
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
+        cursor = conn.cursor()
         cursor.execute(
             """
             INSERT INTO users (username, password)
             VALUES (?, ?)
-            """, (user_name, password_hash)
+            """,
+            (user_name, password_hash)
         )
         user_id = cursor.lastrowid
         cursor.execute(
@@ -180,34 +171,38 @@ def add_user(top_level, user_name: str, password, password_conf, name, str_name,
 
 
 def delete_user(root, username):
+    username = username.strip().lower()
     if not username:
         messagebox.showwarning("Required fields", "Username required.", parent=root)
-
         return
     password = simpledialog.askstring("Confirm deletion", "Enter your password to confirm account deletion:", show="*", parent=root)
     if password is None:
-
         return
     conn = sqlite3.connect(database_file)
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, password FROM users WHERE username = ?",
+            """
+            SELECT id, password
+            FROM users
+            WHERE username = ?
+            """,
             (username,)
         )
         user = cursor.fetchone()
         if user is None:
             messagebox.showerror("Error", "User not found.", parent=root)
-
             return
         user_id, password_hash = user
         if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
             messagebox.showwarning("Invalid password", "The password is incorrect.", parent=root)
-
             return
         cursor.execute(
-            "DELETE FROM users WHERE id = ?",
+            """
+            DELETE FROM users
+            WHERE id = ?
+            """,
             (user_id,)
         )
         conn.commit()
@@ -224,60 +219,33 @@ def login(root, username, password):
     conn = sqlite3.connect(database_file)
     try:
         cursor = conn.cursor()
-
         cursor.execute(
             "SELECT id, password FROM users WHERE username = ?",
             (username,)
         )
-
         user = cursor.fetchone()
-
         if user is None:
-            messagebox.showwarning(
-                "Login failed",
-                "Invalid username or password. Don´t have an account? SIGN UP!!!",
-                parent=root
-            )
+            messagebox.showwarning("Login failed", "Invalid username or password. Don´t have an account? SIGN UP!!!", parent=root)
             return
-
         user_id, password_hash = user
-
-        if not bcrypt.checkpw(
-            password.encode("utf-8"),
-            password_hash.encode("utf-8")
-        ):
-            messagebox.showwarning(
-                "Login failed",
-                "Invalid username or password. Don´t have an account? SIGN UP!!!",
-                parent=root
-            )
+        if not bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8")):
+            messagebox.showwarning("Login failed", "Invalid username or password. Don´t have an account? SIGN UP!!!", parent=root)
             return
-
         logged_in = True
-
         logged_user_id = user_id
-
         logged_username = username
-
         login_status_label.config(text=(f"Logged in as {logged_username}"))
-
         password_entry.delete(0, tk.END)
         password_entry.config(state="disabled")
         user_entry.config(state="disabled")
-
     except sqlite3.Error as error:
-        messagebox.showerror(
-            "Database error",
-            f"Could not access the database.\n\n{error}",
-            parent=root
-        )
-
+        messagebox.showerror("Database error", f"Could not access the database.\n\n{error}", parent=root)
     finally:
         conn.close()
 
+
 def logout():
     global logged_in, logged_user_id, logged_username
-
     logged_in = False
     logged_user_id = None
     logged_username = None
@@ -291,7 +259,6 @@ def logout():
 # ===================================
 # ------- SQL VARIABLES -------
 # ===================================
-
 database_file = "db_trainer.db"
 
 
@@ -508,31 +475,88 @@ options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_h
 options_frame.pack(side="left", fill='both')
 
 user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-user_frame.place(relx=0.5, rely=0.075, anchor="center")
+user_frame.place(relx=0.5, rely=0.06, anchor="center")
 user_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="User")
 user_label.grid(row=0, column=0, columnspan=4)
 user_entry = tk.Entry(user_frame, width=30, justify="center")
 user_entry.grid(row=1, column=0, columnspan=4)
 password_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="Password")
 password_label.grid(row=2, column=0, columnspan=4)
-password_entry = tk.Entry(user_frame, width=27, justify='center')
+password_entry = tk.Entry(user_frame, width=26, justify='center')
 password_entry.config(show="*")
 password_entry.grid(row=3, column=0, columnspan=4, sticky='w')
 show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁", cursor="hand2")
-show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(5,0))
-login_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="LOGIN", command=lambda:login(root, user_entry.get(), password_entry.get()))
-login_button.grid(row=4, column=0, pady=(2,0), padx=(0,1))
-logout_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="LOGOUT", command=logout)
-logout_button.grid(row=4, column=1, pady=(2,0), padx=(0,1))
-add_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="SIGN UP", command=add_user_toplevel)
-add_usr_button.grid(row=4, column=2, pady=(2,0), padx=(0,1))
-del_usr_button = tk.Button(user_frame, bd=0, pady=0, padx=0, text="DEL USR", command=lambda:delete_user(root, user_entry.get()))
-del_usr_button.grid(row=4, column=3, pady=(2,0))
+show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(0,10))
+
+login_btns_frame = tk.Frame(options_frame, bg=bgd_color)
+login_btns_frame.place(relx=0.5, rely=0.15, anchor="center")
+login_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGIN", font=("Arial1", 9), command=lambda:login(root, user_entry.get(), password_entry.get()))
+login_button.grid(row=0, column=0)
+logout_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGOUT", font=("Arial1", 9), command=logout)
+logout_button.grid(row=0, column=1, padx=(5, 5))
+add_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="SIGN UP", font=("Arial1", 9), command=add_user_toplevel)
+add_usr_button.grid(row=0, column=2, padx=(0,5))
+del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial1", 9), command=lambda:delete_user(root, user_entry.get()))
+del_usr_button.grid(row=0, column=3)
 
 login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-login_status_frame.place(relx=0.5, rely=0.174, anchor="center")
+login_status_frame.place(relx=0.5, rely=0.185, anchor="center")
 login_status_label = tk.Label(login_status_frame, fg='white', bg=bgd_color, pady=0, text="Login before start.", justify="center")
 login_status_label.pack()
+
+dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+dropdowns_frame.place(relx=0.5, rely=0.25, anchor="center")
+depth_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=depth_var, values=depths, width=4, state="readonly", height=20)
+depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=0)
+hero_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=hero_position_var, values=positions, width=5, state="readonly", height=10)
+hero_position_dropdown.grid(row=0, column=1, columnspan=3, sticky="w", pady=0)
+spot_action_text_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=spot_action_text_var, values=spot_actions_text, width=16, state="readonly", height=10)
+spot_action_text_dropdown.grid(row=1, column=0, sticky="e", pady=2, padx=(0,5))
+villain_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=villain_position_var, values=possible_villains, width=5, state="readonly", height=10)
+villain_position_dropdown.grid(row=1, column=1, columnspan=3, sticky="w", pady=2)
+combo_pool_type_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_type_var, values=combo_pool_types, width=10, state="readonly", height=10)
+combo_pool_type_dropdown.grid(row=2, column=0, sticky="e", padx=(0,5), pady=0)
+spot_action_entry_1 = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_var_1, values=one_to_hundred, width=3, state="readonly", height=20)
+spot_action_entry_1.grid(row=2, column=1, sticky="e", padx=(0,2), pady=0)
+spot_action_entry_2 = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_var_2, values=one_to_hundred, width=3, state="readonly", height=20)
+spot_action_entry_2.grid(row=2, column=2, sticky="e", padx=0, pady=0)
+
+edit_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+edit_pool_frame.place(relx=0.5, rely=0.33, anchor="center")
+edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL")
+edit_pool_button.pack()
+
+solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+solutions_btns_frame.place(relx=0.5, rely=0.37, anchor="center")
+add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT") #, command=add_solution)
+add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
+del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT") #, command=delete_solution)
+del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=0)
+del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL") #, command=delete_all_solution)
+del_all_buttom.grid(row=3, column=2, pady=0)
+
+choosen_spots_frame = tk.Frame(options_frame, width=options_frame_width)
+choosen_spots_frame.place(relx=0.5, rely=0.515, anchor="center")
+scrollbar = tk.Scrollbar(choosen_spots_frame, orient="vertical")
+scrollbar.pack(side="right", fill="y")
+choosen_spots_list = ttk.Treeview(choosen_spots_frame, height=8, columns=("col1", "col2", "col3", "col4"))
+choosen_spots_list.heading("#0", text="")
+choosen_spots_list.heading("#1", text="bb")
+choosen_spots_list.heading("#2", text="HERO")
+choosen_spots_list.heading("#3", text="VILLAIN")
+choosen_spots_list.heading("#4", text="SPOT")
+choosen_spots_list.column("#0", width=1, stretch=tk.NO)
+choosen_spots_list.column("#1", width=26)
+choosen_spots_list.column("#2", width=36)
+choosen_spots_list.column("#3", width=50)
+choosen_spots_list.column("#4", width=50)
+choosen_spots_list.pack(side="left")
+
+choosen_spots_list.insert("", "end", values=("200", "UTG1", "UTG1", "RFI"))
+choosen_spots_list.insert("", "end", values=("20", "CO", "BB", "RFI"))
+choosen_spots_list.insert("", "end", values=("50", "BTN", "BB", "3BET"))
+choosen_spots_list.insert("", "end", values=("1", "SB", "BB", "RFI"))
+choosen_spots_list.insert("", "end", values=("5", "UTG", "MP", "OPEN"))
 
 # CHARTS FRAME
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg='#ffffff')

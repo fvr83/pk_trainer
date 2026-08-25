@@ -881,7 +881,6 @@ lr_canvas.pack()
 
 options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_height, bg=bgd_color)
 options_frame.pack(side="left")
-options_frame.pack_propagate(False)
 
 user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 user_frame.place(relx=0.5, rely=0.06, anchor="center")
