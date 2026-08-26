@@ -395,20 +395,20 @@ logged_in = False
 logged_user_id = None
 logged_username = None
 
-root_width, root_height = 1366, 707
+root_width, root_height = 1356, 667
 
-main_frame_width, main_frame_height = 800, 707
-options_frame_width, options_frame_height = 240, root_height
+main_frame_width, main_frame_height = 800, root_height
+options_frame_width, options_frame_height = 232, root_height
 charts_frame_width, charts_frame_height = 326, root_height
 
 table_frame_width = current_progress_frame_width = last_result_frame_width = actions_frame_width = main_frame_width
 current_progress_frame_height = 36
-table_frame_height = 560
+table_frame_height = 552
 actions_frame_height = 41
 last_result_frame_height = 70
 
 oval_center_x = (table_frame_width // 2) - 1
-oval_center_y = table_frame_height // 2 - 14
+oval_center_y = table_frame_height // 2 - 24
 oval_radius_x = 300
 oval_radius_y = 175
 
@@ -420,6 +420,10 @@ pot_x = oval_center_x
 pot_y = oval_center_y + 45
 pot_odds_x = oval_center_x
 pot_odds_y = oval_center_y + 60
+rng_symbol_x = oval_center_x + 115
+rng_symbol_y = oval_center_y + 260
+rng_value_x = oval_center_x + 180
+rng_value_y = oval_center_y + 260
 
 current_progress_line1_x = current_progress_frame_width // 2
 current_progress_line1_y = (current_progress_frame_height // 5) + 1
@@ -427,14 +431,17 @@ current_progress_line2_x = current_progress_frame_width // 2
 current_progress_line2_y = current_progress_frame_height - 7
 
 last_result_line1_x = last_result_frame_width // 2
-last_result_line1_y = (last_result_frame_height // 8) - 1
+last_result_line1_y = (last_result_frame_height // 8) + 4
 last_result_line2_x = last_result_frame_width // 2
-last_result_line2_y = last_result_frame_height - 45
+last_result_line2_y = last_result_frame_height - 40
 
 bgd_color = "#515152"
 table_color = "#61cc4b"
 btn_color = "#F39508"
-position_color = "#E9E9E9" 
+position_color = "#E9E9E9"
+stopped_color = "#f76969"
+training_color = "#36ff04"
+paused_color = "#eafc4b"
 
 depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
 one_to_hundred = [i for i in range(101)]
@@ -481,26 +488,26 @@ options_frame.pack(side="left", fill='both')
 user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 user_frame.place(relx=0.5, rely=0.06, anchor="center")
 user_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="User")
-user_label.grid(row=0, column=0, columnspan=4)
+user_label.grid(row=0, column=0, columnspan=2)
 user_entry = tk.Entry(user_frame, width=30, justify="center")
-user_entry.grid(row=1, column=0, columnspan=4)
+user_entry.grid(row=1, column=0, columnspan=2)
 password_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="Password")
-password_label.grid(row=2, column=0, columnspan=4)
+password_label.grid(row=2, column=0, columnspan=2)
 password_entry = tk.Entry(user_frame, width=26, justify='center')
 password_entry.config(show="*")
-password_entry.grid(row=3, column=0, columnspan=4, sticky='w')
+password_entry.grid(row=3, column=0, sticky='w')
 show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁", cursor="hand2")
-show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(0,10))
+show_password.grid(row=3, column=1, sticky='e', padx=(0,10))
 
 login_btns_frame = tk.Frame(options_frame, bg=bgd_color)
 login_btns_frame.place(relx=0.5, rely=0.15, anchor="center")
-login_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGIN", font=("Arial1", 9), command=lambda:login(root, user_entry.get(), password_entry.get()))
+login_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGIN", font=("Arial", 9), command=lambda:login(root, user_entry.get(), password_entry.get()))
 login_button.grid(row=0, column=0)
-logout_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGOUT", font=("Arial1", 9), command=logout)
+logout_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="LOGOUT", font=("Arial", 9), command=logout)
 logout_button.grid(row=0, column=1, padx=(5, 5))
-add_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="SIGN UP", font=("Arial1", 9), command=add_user_toplevel)
+add_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="SIGN UP", font=("Arial", 9), command=add_user_toplevel)
 add_usr_button.grid(row=0, column=2, padx=(0,5))
-del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial1", 9), command=lambda:delete_user(root, user_entry.get()))
+del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial", 9), command=lambda:delete_user(root, user_entry.get()))
 del_usr_button.grid(row=0, column=3)
 
 login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)

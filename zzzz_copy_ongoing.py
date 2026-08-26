@@ -76,7 +76,7 @@ def add_solution():
         spot_action_text_var.get(),
         villain_position_var.get(),
         combo_pool_type_var.get(),
-        folder_var.get()
+        folder_var.get().replace(" ", "").lower()
     ]
 
     try:
@@ -309,6 +309,7 @@ def start_trainer():
         all_spots_result_dict.setdefault(complete_spot, result_dict)
         opt_parts = chosen_options.split(" | ")
         options = [*opt_parts]
+        options[-1] = options[-1].replace(" ", "").lower()
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
         mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
         hero_idx = positions.index(spot_position)
@@ -775,18 +776,17 @@ options_menu.add_command(label="Analizer")
 options_menu.add_separator()
 options_menu.add_command(label="Quit", command=root.destroy)
 menu_bar.add_cascade(label="Options", menu=options_menu)
-cut = 8
 main_frame_width, main_frame_height = 800, root_height
 table_frame_width = current_progress_frame_width = last_result_frame_width = actions_frame_width = main_frame_width
 current_progress_frame_height = 36
-table_frame_height = 560 - cut
+table_frame_height = 552
 actions_frame_height = 41
 last_result_frame_height = 70
 options_frame_width, options_frame_height = 232, root_height
 charts_frame_width, charts_frame_height = 326, root_height
 
 oval_center_x = (table_frame_width // 2) - 1
-oval_center_y = table_frame_height // 2 - 28 + (cut//2)
+oval_center_y = table_frame_height // 2 - 24
 oval_radius_x = 300
 oval_radius_y = 175
 
@@ -798,8 +798,6 @@ pot_x = oval_center_x
 pot_y = oval_center_y + 45
 pot_odds_x = oval_center_x
 pot_odds_y = oval_center_y + 60
-# canvas.create_text(510, 530, font=("Arial", 40), text="🎲")
-# canvas.create_text(562, 533, font=("Arial", 30), text=rng)
 rng_symbol_x = oval_center_x + 115
 rng_symbol_y = oval_center_y + 260
 rng_value_x = oval_center_x + 180
@@ -823,7 +821,7 @@ stopped_color = "#f76969"
 training_color = "#36ff04"
 paused_color = "#eafc4b"
 
-folder_var = tk.StringVar(root, value="json_results")
+folder_var = tk.StringVar(root, value="Chip EV")
 depth_var = tk.StringVar(root, value="50")
 hero_position_var = tk.StringVar(root, value="UTG")
 spot_action_text_var = tk.StringVar(root, value="rfi")
@@ -833,8 +831,8 @@ combo_pool_var_1 = tk.StringVar(root, value="0")
 combo_pool_var_2 = tk.StringVar(root, value="0")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=True)
-freeze_var = tk.StringVar(value="always")
-show_results_var = tk.StringVar(value="results")
+freeze_var = tk.StringVar(value="never")
+show_results_var = tk.StringVar(value="both")
 dealing_options_var = tk.StringVar(value="per combo")
 precision_var = tk.StringVar(value="precise")
 limit_type_var = tk.StringVar(root, value="hands")
@@ -852,9 +850,10 @@ limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
 precisions = ["precise", "simple", "any right"]
 dealing_options = ['per combo', 'per hand']
-freeze_options = ["always", "wrong", "imprecise/wrong", "never", "imprecise", "right/wrong", "right/imprecise", "right"]
-show_results_option = ["results", "current", "last", "none"]
+freeze_options = ["never", "wrong", "imprecise/wrong", "always", "imprecise", "right/wrong", "right/imprecise", "right"]
+show_results_option = ["both", "current", "last", "none"]
 roles_options = ["custom", "focus"]
+folder_options = ["Chip EV"]
 
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg=bgd_color)
 main_frame.pack(side="left", fill="both")
@@ -885,16 +884,16 @@ options_frame.pack(side="left")
 user_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 user_frame.place(relx=0.5, rely=0.06, anchor="center")
 user_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="User")
-user_label.grid(row=0, column=0, columnspan=4)
+user_label.grid(row=0, column=0, columnspan=2)
 user_entry = tk.Entry(user_frame, width=30, justify="center")
-user_entry.grid(row=1, column=0, columnspan=4)
+user_entry.grid(row=1, column=0, columnspan=2)
 password_label = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="Password")
-password_label.grid(row=2, column=0, columnspan=4)
+password_label.grid(row=2, column=0, columnspan=2)
 password_entry = tk.Entry(user_frame, width=26, justify='center')
 password_entry.config(show="*")
-password_entry.grid(row=3, column=0, columnspan=4, sticky='w')
+password_entry.grid(row=3, column=0, sticky='w')
 show_password = tk.Label(user_frame, fg='white', bg=bgd_color, pady=0, text="👁", cursor="hand2")
-show_password.grid(row=3, column=1, columnspan=4, sticky='e', padx=(0,10))
+show_password.grid(row=3, column=1, sticky='e', padx=(0,10))
 
 login_btns_frame = tk.Frame(options_frame, bg=bgd_color)
 login_btns_frame.place(relx=0.5, rely=0.15, anchor="center")
@@ -907,21 +906,23 @@ add_usr_button.grid(row=0, column=2, padx=(0,5))
 del_usr_button = tk.Button(login_btns_frame, bd=0, pady=0, padx=0, text="DEL USR", font=("Arial1", 9))
 del_usr_button.grid(row=0, column=3)
 
-login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
-login_status_frame.place(relx=0.5, rely=0.185, anchor="center")
+login_status_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color,pady=0)
+login_status_frame.place(relx=0.5, rely=0.181, anchor="center")
 login_status_label = tk.Label(login_status_frame, fg='white', bg=bgd_color, pady=0, text="Login before start.", justify="center")
-login_status_label.pack()
+login_status_label.pack(pady=0)
 
 dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 dropdowns_frame.place(relx=0.5, rely=0.25, anchor="center")
+folder_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=folder_var, values=folder_options, width=8, state="readonly", height=20)
+folder_dropdown.grid(row=0, column=0, sticky="w", padx=(15,5), pady=0)
 depth_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=depth_var, values=depths, width=4, state="readonly", height=20)
-depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=0)
+depth_dropdown.grid(row=0, column=1, sticky="w", padx=(0,5), pady=0)
 hero_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=hero_position_var, values=positions, width=5, state="readonly", height=10)
-hero_position_dropdown.grid(row=0, column=1, columnspan=3, sticky="w", pady=0)
+hero_position_dropdown.grid(row=0, column=2, sticky="w", pady=0)
 spot_action_text_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=spot_action_text_var, values=spot_actions_text, width=16, state="readonly", height=10)
-spot_action_text_dropdown.grid(row=1, column=0, sticky="e", pady=2, padx=(0,5))
+spot_action_text_dropdown.grid(row=1, column=0, columnspan=2, sticky="w", pady=2, padx=(0,5))
 villain_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=villain_position_var, values=possible_villains, width=5, state="readonly", height=10)
-villain_position_dropdown.grid(row=1, column=1, columnspan=3, sticky="w", pady=2)
+villain_position_dropdown.grid(row=1, column=2, sticky="w", pady=2)
 combo_pool_type_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_type_var, values=combo_pool_types, width=10, state="readonly", height=10)
 combo_pool_type_dropdown.grid(row=2, column=0, sticky="e", padx=(0,5), pady=0)
 spot_action_entry_1 = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_var_1, values=one_to_hundred, width=3, state="readonly", height=20)
@@ -1012,7 +1013,7 @@ freeze_dropdown.pack(side="left")
 
 show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
 show_rtresults_frame.place(relx=0.5, rely=0.864, anchor="center")
-show_rtresults_label = tk.Label(show_rtresults_frame, fg="white", bg=bgd_color, text="RT SHOW:", font=("Arial", 12, "bold"))
+show_rtresults_label = tk.Label(show_rtresults_frame, fg="white", bg=bgd_color, text="RTR SHOW:", font=("Arial", 12, "bold"))
 show_rtresults_label.pack(side="left")
 show_rtresults_dropdown = ttk.Combobox(show_rtresults_frame, background=bgd_color, justify="center", textvariable=show_results_var, values=show_results_option, width=8, state="readonly", height=5)
 show_rtresults_dropdown.pack(side="left")
@@ -1057,7 +1058,7 @@ pool_label.pack()
 
 root.bind("h", toggle_help)
 root.bind("p", toggle_pool)
-spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: (get_possible_villains()))
+spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
 hero_position_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
 h_key_label.bind("<Button-1>", toggle_help)
 p_key_label.bind("<Button-1>", toggle_pool)
