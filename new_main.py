@@ -4,6 +4,47 @@ from tkinter import messagebox, simpledialog
 import re
 import bcrypt
 from tkinter import ttk
+from pathlib import Path
+import json
+
+
+
+
+# ===================================
+# ------- SUPPORT FUNCTIONS -------
+# ===================================
+def get_data(depth, spot_position, spot, villain_position, folder):
+    
+    for path in Path(folder).iterdir():
+        if not path.is_file():
+
+            continue
+        file_extension = str(path).removeprefix(f"{folder}\\")
+        file_name = file_extension.removesuffix(".json")
+        if f"_{depth}bb_" not in file_name:
+
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            data_temp = json.load(f)
+        if villain_position and villain_position != "None":
+            data = data_temp[spot_position][spot][villain_position]
+        else:
+
+            data = data_temp[spot_position][spot]
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = data
+
+    return mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict
+
+
+def pool_preview():
+    ...
+
+
+
+# ===================================
+# ------- SQL VARIABLES -------
+# ===================================
+database_file = "db_trainer.db"
 
 
 
@@ -262,9 +303,69 @@ def logout():
 
 
 # ===================================
-# ------- SQL VARIABLES -------
+# ------- ROOT VARIABLES -------
 # ===================================
-database_file = "db_trainer.db"
+logged_in = False
+logged_user_id = None
+logged_username = None
+
+spots = dict()
+
+root_width, root_height = 1356, 667
+
+main_frame_width, main_frame_height = 800, root_height
+options_frame_width, options_frame_height = 232, root_height
+charts_frame_width, charts_frame_height = 326, root_height
+
+table_frame_width = current_progress_frame_width = last_result_frame_width = actions_frame_width = main_frame_width
+current_progress_frame_height = 36
+table_frame_height = 552
+actions_frame_height = 41
+last_result_frame_height = 70
+
+oval_center_x = (table_frame_width // 2) - 1
+oval_center_y = table_frame_height // 2 - 24
+oval_radius_x = 300
+oval_radius_y = 175
+
+table_line1_x = oval_center_x
+table_line1_y = oval_center_y - 11
+table_line2_x = oval_center_x
+table_line2_y = oval_center_y + 11
+pot_x = oval_center_x
+pot_y = oval_center_y + 45
+pot_odds_x = oval_center_x
+pot_odds_y = oval_center_y + 60
+rng_symbol_x = oval_center_x + 115
+rng_symbol_y = oval_center_y + 260
+rng_value_x = oval_center_x + 180
+rng_value_y = oval_center_y + 260
+
+current_progress_line1_x = current_progress_frame_width // 2
+current_progress_line1_y = (current_progress_frame_height // 5) + 1
+current_progress_line2_x = current_progress_frame_width // 2
+current_progress_line2_y = current_progress_frame_height - 7
+
+last_result_line1_x = last_result_frame_width // 2
+last_result_line1_y = (last_result_frame_height // 8) + 4
+last_result_line2_x = last_result_frame_width // 2
+last_result_line2_y = last_result_frame_height - 40
+
+bgd_color = "#515152"
+table_color = "#61cc4b"
+btn_color = "#F39508"
+position_color = "#E9E9E9"
+stopped_color = "#f76969"
+training_color = "#36ff04"
+paused_color = "#eafc4b"
+
+depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
+one_to_hundred = [i for i in range(101)]
+positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
+spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]
+combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
+limits_types = ["hands", "time (s)", "all pool"]
+possible_villains = ["None"]
 
 
 
@@ -388,70 +489,6 @@ def add_user_toplevel():
 
 
 
-# ===================================
-# ------- ROOT VARIABLES -------
-# ===================================
-logged_in = False
-logged_user_id = None
-logged_username = None
-
-root_width, root_height = 1356, 667
-
-main_frame_width, main_frame_height = 800, root_height
-options_frame_width, options_frame_height = 232, root_height
-charts_frame_width, charts_frame_height = 326, root_height
-
-table_frame_width = current_progress_frame_width = last_result_frame_width = actions_frame_width = main_frame_width
-current_progress_frame_height = 36
-table_frame_height = 552
-actions_frame_height = 41
-last_result_frame_height = 70
-
-oval_center_x = (table_frame_width // 2) - 1
-oval_center_y = table_frame_height // 2 - 24
-oval_radius_x = 300
-oval_radius_y = 175
-
-table_line1_x = oval_center_x
-table_line1_y = oval_center_y - 11
-table_line2_x = oval_center_x
-table_line2_y = oval_center_y + 11
-pot_x = oval_center_x
-pot_y = oval_center_y + 45
-pot_odds_x = oval_center_x
-pot_odds_y = oval_center_y + 60
-rng_symbol_x = oval_center_x + 115
-rng_symbol_y = oval_center_y + 260
-rng_value_x = oval_center_x + 180
-rng_value_y = oval_center_y + 260
-
-current_progress_line1_x = current_progress_frame_width // 2
-current_progress_line1_y = (current_progress_frame_height // 5) + 1
-current_progress_line2_x = current_progress_frame_width // 2
-current_progress_line2_y = current_progress_frame_height - 7
-
-last_result_line1_x = last_result_frame_width // 2
-last_result_line1_y = (last_result_frame_height // 8) + 4
-last_result_line2_x = last_result_frame_width // 2
-last_result_line2_y = last_result_frame_height - 40
-
-bgd_color = "#515152"
-table_color = "#61cc4b"
-btn_color = "#F39508"
-position_color = "#E9E9E9"
-stopped_color = "#f76969"
-training_color = "#36ff04"
-paused_color = "#eafc4b"
-
-depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", "38", "35", "32", "30", "28", "26", "25", "22", "20", "19", "17", "16", "15", "14", "13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
-one_to_hundred = [i for i in range(101)]
-positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
-spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]
-combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
-limits_types = ["hands", "time (s)", "all pool"]
-possible_villains = ["None"]
-
-
 
 # ===================================
 # ------- MAIN ROOT -------
@@ -461,6 +498,7 @@ root.title("Preflop Trainer")
 root.geometry(f"{root_width}x{root_height}+0+0")
 root.resizable(False, False)
 
+#TK_VARS
 folder_var = tk.StringVar(root, value="json_results")
 depth_var = tk.StringVar(root, value="50")
 hero_position_var = tk.StringVar(root, value="UTG")
@@ -534,7 +572,7 @@ spot_action_entry_2.grid(row=2, column=2, sticky="e", padx=0, pady=0)
 
 edit_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 edit_pool_frame.place(relx=0.5, rely=0.33, anchor="center")
-edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL")
+edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL") #, command=edit_pool)
 edit_pool_button.pack()
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
@@ -543,7 +581,7 @@ add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
 del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT") #, command=delete_solution)
 del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=0)
-del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL") #, command=delete_all_solution)
+del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL") #, command=delete_all_solutions)
 del_all_buttom.grid(row=3, column=2, pady=0)
 
 choosen_spots_frame = tk.Frame(options_frame, width=options_frame_width)

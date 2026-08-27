@@ -54,9 +54,6 @@ color_data = { # call color 20% S in HSV BB+BU+CO R -10% V in HSV
 
 
 
-# def update_rt_pool():
-
-
 
 def sort_key(combo: str, combo_results: list[str, list[dict[str, float]]], spot_non_fold_most_frequent_actions: list[str], vs: int) -> tuple[float]:
     result = []
