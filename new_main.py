@@ -4,40 +4,9 @@ from tkinter import messagebox, simpledialog
 import re
 import bcrypt
 from tkinter import ttk
-from pathlib import Path
-import json
-
-
-
-
-# ===================================
-# ------- SUPPORT FUNCTIONS -------
-# ===================================
-def get_data(depth, spot_position, spot, villain_position, folder):
-    
-    for path in Path(folder).iterdir():
-        if not path.is_file():
-
-            continue
-        file_extension = str(path).removeprefix(f"{folder}\\")
-        file_name = file_extension.removesuffix(".json")
-        if f"_{depth}bb_" not in file_name:
-
-            continue
-        with open(path, "r", encoding="utf-8") as f:
-            data_temp = json.load(f)
-        if villain_position and villain_position != "None":
-            data = data_temp[spot_position][spot][villain_position]
-        else:
-
-            data = data_temp[spot_position][spot]
-        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = data
-
-    return mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict
-
-
-def pool_preview():
-    ...
+from PIL import ImageTk
+from Seat import *
+from new_main_support import *
 
 
 
@@ -308,7 +277,11 @@ def logout():
 logged_in = False
 logged_user_id = None
 logged_username = None
+help_visible = True
+pool_visible = True
+edit_canvas = None
 
+current_pool = []
 spots = dict()
 
 root_width, root_height = 1356, 667
@@ -363,9 +336,10 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
 one_to_hundred = [i for i in range(101)]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
 spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]
-combo_pool_types = ["all", "tot-75", "tot-100", "bd-0.01-0.7", "mb-1", "mb-0.01", "mb-0.1", "mb-0"]
+combo_pool_types = ["tot"]
 limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
+folder_options = ["Chip EV"]
 
 
 
@@ -486,7 +460,208 @@ def add_user_toplevel():
     su_show_password_label_conf.bind("<ButtonPress-1>", su_show_password_press_2)
     su_show_password_label_conf.bind("<ButtonRelease-1>", su_show_password_release_2)
     su_show_password_label_conf.bind("<Leave>", su_show_password_leave_2)
+    
 
+def preview_pool(depth, hero, spot, villain, folder, pool_type, pool_var_1, pool_var_2):
+    global current_pool
+    mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
+    mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
+    pool = get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos)
+    pool_chart = draw_pool_chart(pool)
+    pool_chart_tk = ImageTk.PhotoImage(pool_chart)
+    pool_label.config(image=pool_chart_tk)
+    pool_label.image = pool_chart_tk
+    combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos_final = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+    chart = draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos_final)
+    chart_tk = ImageTk.PhotoImage(chart)
+    help_label.config(image=chart_tk)
+    help_label.image = chart_tk
+    current_pool = pool
+
+
+def toggle_help(event=None):
+    global help_visible
+    if help_visible:
+        help_frame.place_forget()
+    else:
+        help_frame.place(x=0, y=-2)
+        help_frame.lift()
+    help_visible = not help_visible
+
+
+def toggle_pool(event=None):
+    global pool_visible
+    if pool_visible:
+        pool_frame.place_forget()
+    else:
+        pool_frame.place(x=0, y=333)
+    pool_visible = not pool_visible
+
+
+def toggle_edit_pool():
+    if edit_pool_button["text"] == "EDIT POOL":
+        edit_pool()
+    elif edit_pool_button["text"] == "END EDIT":
+        end_edit()
+
+
+def edit_pool():
+    global current_pool, edit_canvas
+    edit_pool_button.config(text="END EDIT")
+    selected_combos = set()
+    for combo in current_pool:
+        selected_combos.add(combo)
+    current_selection = set()
+    diagonal_combos = set()
+    click_mode = None
+    first_clicked_combo_row = None
+    first_clicked_combo_col = None
+    ranks = "AKQJT98765432"
+    all_combos = [f"{r_1 + r_2}" if i == j else f"{r_1 + r_2 + 's'}" if i < j else f"{r_2 + r_1 + 'o'}" for j, r_2 in enumerate(ranks) for i, r_1 in enumerate(ranks)]
+    combos_matrix = [[f"{r_1 + r_2}" if i == j else f"{r_1 + r_2 + 's'}" if i < j else f"{r_2 + r_1 + 'o'}" for j, r_2 in enumerate(ranks)] for i, r_1 in enumerate(ranks)]
+    matrix_length = 13
+    cell_size = 25
+    matrix_size = (matrix_length * cell_size) + 1
+    fill_color = '#8a8a2d'
+    border_color = "#000000"
+    canvas = tk.Canvas(charts_frame, width=matrix_size, height=matrix_size)
+    canvas.place(x=0, y=333)
+    edit_canvas = canvas
+    def get_click_row_col(event: tk.Event):
+        if not (0 <= event.x < matrix_size and 0 <= event.y < matrix_size):
+
+            return
+        row = event.y // cell_size
+        col = event.x // cell_size
+
+        return row, col
+    def check_combo_selection_triggers(event: tk.Event, col: int, row: int, clicked_combo: str, abs_row_col: int, combos: list):
+        nonlocal diagonal_combos
+        if event.state in [9, 265]:
+            if (row == col) and row > 0:
+                for i in range(row):
+                    combo_to_append = f"{ranks[row - i - 1]}{ranks[row - i - 1]}"
+                    if (clicked_combo not in selected_combos) and (combo_to_append not in selected_combos):
+                        combos.append(combo_to_append)
+                    elif (clicked_combo in selected_combos) and (combo_to_append in selected_combos):
+                        combos.append(combo_to_append)
+            elif (row < col) and abs_row_col > 0:
+                for i in range(abs_row_col - 1):
+                    combo_to_append = f"{ranks[row]}{ranks[col - i - 1]}s"
+                    if (clicked_combo not in selected_combos) and (combo_to_append not in selected_combos):
+                        combos.append(combo_to_append)
+                    elif (clicked_combo in selected_combos) and (combo_to_append in selected_combos):
+                        combos.append(combo_to_append)
+            elif (row > col) and abs_row_col > 0:
+                for i in range(abs_row_col - 1):
+                    combo_to_append = f"{ranks[col]}{ranks[row - i - 1]}o"
+                    if (clicked_combo not in selected_combos) and (combo_to_append not in selected_combos):
+                        combos.append(combo_to_append)
+                    elif (clicked_combo in selected_combos) and (combo_to_append in selected_combos):
+                        combos.append(combo_to_append)
+        elif (event.state in [12, 268]) and (row == col):
+            higher_lines = abs(col - 0)
+            lower_lines = abs(col - 12)
+            for i in range(higher_lines):
+                combo_to_append_s = f"{ranks[i]}{ranks[row]}s"
+                if (clicked_combo not in selected_combos) and (combo_to_append_s not in selected_combos):
+                    combos.append(combo_to_append_s)
+                elif (clicked_combo in selected_combos) and (combo_to_append_s in selected_combos):
+                    combos.append(combo_to_append_s)
+                combo_to_append_o = f"{ranks[i]}{ranks[row]}o"
+                if (clicked_combo not in selected_combos) and (combo_to_append_o not in selected_combos):
+                    combos.append(combo_to_append_o)
+                elif (clicked_combo in selected_combos) and (combo_to_append_o in selected_combos):
+                    combos.append(combo_to_append_o)
+            for i in range(lower_lines):
+                combo_to_append_s = f"{ranks[row]}{ranks[12 - i]}s"
+                if (clicked_combo not in selected_combos) and (combo_to_append_s not in selected_combos):
+                    combos.append(combo_to_append_s)
+                elif (clicked_combo in selected_combos) and (combo_to_append_s in selected_combos):
+                    combos.append(combo_to_append_s)
+                combo_to_append_o = f"{ranks[row]}{ranks[12 - i]}o"
+                if (clicked_combo not in selected_combos) and (combo_to_append_o not in selected_combos):
+                    combos.append(combo_to_append_o)
+                elif (clicked_combo in selected_combos) and (combo_to_append_o in selected_combos):
+                    combos.append(combo_to_append_o)
+        elif event.state == 131336: # Alt
+            if not diagonal_combos:
+                first_combo = combos_matrix[row][col]
+                diagonal_combos.add(first_combo)
+                directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                for dr, dc in directions:
+                    i = 1
+                    while True:
+                        r = row + dr * i
+                        c = col + dc * i
+                        if not (0 <= r < 13 and 0 <= c < 13):
+
+                            break
+                        diagonal_combos.add(combos_matrix[r][c])
+                        i += 1
+
+        return combos
+    def mouse_click(event: tk.Event):
+        nonlocal  click_mode
+        row, col = get_click_row_col(event)
+        abs_row_col = abs(row - col)
+        clicked_combo = combos_matrix[row][col]
+        combos = [clicked_combo]
+        combos = check_combo_selection_triggers(event, col, row, clicked_combo, abs_row_col, combos)
+        for combo in combos:
+            if combo not in current_selection:
+                current_selection.add(combo)
+                if combo not in selected_combos:
+                    click_mode = "select"
+                    canvas.itemconfig(f"{combo}_cell", fill=fill_color)
+                    selected_combos.add(combo)
+                else:
+                    click_mode = "unselect"
+                    canvas.itemconfig(f"{combo}_cell", fill="")
+                    selected_combos.remove(combo)
+    def mouse_drag(event: tk.Event):
+        row, col = get_click_row_col(event)
+        abs_row_col = abs(row - col)
+        clicked_combo = combos_matrix[row][col]
+        combos = [clicked_combo]
+        combos = check_combo_selection_triggers(event, col, row, clicked_combo, abs_row_col, combos)
+        for combo in combos:
+            if diagonal_combos:
+                if combo not in diagonal_combos:
+
+                    continue
+            if combo not in current_selection:
+                current_selection.add(combo)
+                if combo not in selected_combos and click_mode == "select":
+                    canvas.itemconfig(f"{combo}_cell", fill=fill_color)
+                    selected_combos.add(combo)
+                elif combo in selected_combos and click_mode == "unselect":
+                    canvas.itemconfig(f"{combo}_cell", fill="")
+                    selected_combos.remove(combo)
+    def mouse_release(_):
+        nonlocal current_selection, diagonal_combos, click_mode
+        current_selection = set()
+        diagonal_combos = set()
+        click_mode = None
+    for row in range(matrix_length):
+        for column in range(matrix_length):
+            combo = combos_matrix[row][column]
+            combo_bg_color = fill_color if combo in selected_combos else None
+            combo_x0 = (column * cell_size) + 2
+            combo_x1 = combo_x0 + cell_size
+            combo_y0 = (row * cell_size) + 2
+            combo_y1 = combo_y0 + cell_size
+            canvas.create_rectangle(combo_x0, combo_y0, combo_x1, combo_y1, fill=combo_bg_color, outline=border_color, tags=f'{combo}_cell')
+            canvas.create_text(combo_x0 + (cell_size // 2), combo_y0 + (cell_size // 2), text=combo)
+    canvas.bind("<Button-1>", mouse_click)
+    canvas.bind("<B1-Motion>", mouse_drag)
+    canvas.bind("<ButtonRelease-1>", mouse_release)
+
+
+def end_edit():
+    global current_pool, edit_canvas
+    edit_pool_button.config(text="EDIT POOL")
+    edit_canvas.destroy()
 
 
 
@@ -499,13 +674,13 @@ root.geometry(f"{root_width}x{root_height}+0+0")
 root.resizable(False, False)
 
 #TK_VARS
-folder_var = tk.StringVar(root, value="json_results")
+folder_var = tk.StringVar(root, value="Chip EV")
 depth_var = tk.StringVar(root, value="50")
 hero_position_var = tk.StringVar(root, value="UTG")
 spot_action_text_var = tk.StringVar(root, value="rfi")
 villain_position_var = tk.StringVar(root, value="None")
-combo_pool_type_var = tk.StringVar(root, value="bd-0.01-0.7")
-combo_pool_var_1 = tk.StringVar(root, value="0")
+combo_pool_type_var = tk.StringVar(root, value="tot")
+combo_pool_var_1 = tk.StringVar(root, value="100")
 combo_pool_var_2 = tk.StringVar(root, value="0")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=True)
@@ -555,14 +730,16 @@ login_status_label.pack()
 
 dropdowns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 dropdowns_frame.place(relx=0.5, rely=0.25, anchor="center")
+folder_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=folder_var, values=folder_options, width=8, state="readonly", height=20)
+folder_dropdown.grid(row=0, column=0, sticky="w", padx=(15,5), pady=0)
 depth_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=depth_var, values=depths, width=4, state="readonly", height=20)
-depth_dropdown.grid(row=0, column=0, sticky="e", padx=(0,5), pady=0)
+depth_dropdown.grid(row=0, column=1, sticky="w", padx=(0,5), pady=0)
 hero_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=hero_position_var, values=positions, width=5, state="readonly", height=10)
-hero_position_dropdown.grid(row=0, column=1, columnspan=3, sticky="w", pady=0)
+hero_position_dropdown.grid(row=0, column=2, sticky="w", pady=0)
 spot_action_text_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=spot_action_text_var, values=spot_actions_text, width=16, state="readonly", height=10)
-spot_action_text_dropdown.grid(row=1, column=0, sticky="e", pady=2, padx=(0,5))
+spot_action_text_dropdown.grid(row=1, column=0, columnspan=2, sticky="w", pady=2, padx=(0,5))
 villain_position_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=villain_position_var, values=possible_villains, width=5, state="readonly", height=10)
-villain_position_dropdown.grid(row=1, column=1, columnspan=3, sticky="w", pady=2)
+villain_position_dropdown.grid(row=1, column=2, sticky="w", pady=2)
 combo_pool_type_dropdown = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_type_var, values=combo_pool_types, width=10, state="readonly", height=10)
 combo_pool_type_dropdown.grid(row=2, column=0, sticky="e", padx=(0,5), pady=0)
 spot_action_entry_1 = ttk.Combobox(dropdowns_frame, justify="center", textvariable=combo_pool_var_1, values=one_to_hundred, width=3, state="readonly", height=20)
@@ -572,16 +749,16 @@ spot_action_entry_2.grid(row=2, column=2, sticky="e", padx=0, pady=0)
 
 edit_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 edit_pool_frame.place(relx=0.5, rely=0.33, anchor="center")
-edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL") #, command=edit_pool)
+edit_pool_button = tk.Button(edit_pool_frame, bd=0, pady=0, padx=0, text="EDIT POOL", command=toggle_edit_pool)
 edit_pool_button.pack()
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 solutions_btns_frame.place(relx=0.5, rely=0.37, anchor="center")
-add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT") #, command=add_solution)
+add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT")#, command=add_solution)
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
-del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT") #, command=delete_solution)
+del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT")#, command=delete_solution)
 del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=0)
-del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL") #, command=delete_all_solutions)
+del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL")#, command=delete_all_solution)
 del_all_buttom.grid(row=3, column=2, pady=0)
 
 choosen_spots_frame = tk.Frame(options_frame, width=options_frame_width)
@@ -601,22 +778,44 @@ choosen_spots_list.column("#3", width=40)
 choosen_spots_list.column("#4", width=106)
 choosen_spots_list.pack(side="left")
 
+status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
+status_frame.place(relx=0.5, rely=0.9632, anchor="center")
+status_label = tk.Label(status_frame, bd=0, bg=bgd_color, text="STOPPED", foreground=stopped_color, font=("Arial", 12, "bold"))
+status_label.pack()
+
 # CHARTS FRAME
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
 charts_frame.pack(side="left", fill='both')
 
 help_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
+help_frame.place(x=0, y=-2)
 help_label = tk.Label(help_frame, bd=0, pady=0)
 help_label.pack()
 pool_frame = tk.Frame(charts_frame, bg=bgd_color, width=325, height=336)
+pool_frame.place(x=0, y=333)
 pool_label = tk.Label(pool_frame, bd=0, pady=0)
 pool_label.pack()
 
 #BINDS
+root.bind("h", toggle_help)
+root.bind("p", toggle_pool)
+
 show_password.bind("<ButtonPress-1>", show_password_press)
 show_password.bind("<ButtonRelease-1>", show_password_release)
 show_password.bind("<Leave>", show_password_leave)
 
+depth_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+folder_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+hero_position_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+spot_action_text_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+villain_position_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+combo_pool_type_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+combo_pool_var_1.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+combo_pool_var_2.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+
+# MAIN_LOOP
 load_database()
+
+preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get())
 
 root.mainloop()
