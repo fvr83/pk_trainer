@@ -340,6 +340,12 @@ combo_pool_types = ["tot", "max", "freq more than", "bd"]
 limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
 folder_options = ["Chip EV"]
+possible_villains = ["None"]
+precisions = ["precise", "simple", "any right"]
+dealing_options = ['per combo', 'per hand']
+freeze_options = ["never", "wrong", "imprecise/wrong", "always", "imprecise", "right/wrong", "right/imprecise", "right"]
+show_results_option = ["both", "current", "last", "none"]
+roles_options = ["custom", "focus"]
 
 
 
@@ -471,6 +477,22 @@ def pool_type_from_spot(event=None):
         combo_pool_type_var.set("freq more than")
         combo_pool_var_1.set("0")
         combo_pool_var_2.set("0")
+
+
+def pool_vars_from_pool_type(event=None):
+    if combo_pool_type_var.get() == "bd":
+        combo_pool_var_1.set("1")
+        combo_pool_var_2.set("70")
+    elif combo_pool_type_var.get() == "tot":
+        combo_pool_var_1.set("100")
+        combo_pool_var_2.set("0")
+    elif combo_pool_type_var.get() == "max":
+        combo_pool_var_1.set("1")
+        combo_pool_var_2.set("0")
+    elif combo_pool_type_var.get() == "freq more than":
+        combo_pool_var_1.set("0")
+        combo_pool_var_2.set("0")
+
         
     
 
@@ -479,7 +501,7 @@ def preview_pool(depth, hero, spot, villain, folder, pool_type, pool_var_1, pool
     try:
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
     except:
-        status_label.config(text="NOT FOUND")
+        status_label.config(text="SPOT NOT FOUND", fg="white")
 
         return
     mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
@@ -494,6 +516,7 @@ def preview_pool(depth, hero, spot, villain, folder, pool_type, pool_var_1, pool
     help_label.config(image=chart_tk)
     help_label.image = chart_tk
     current_pool = pool
+    status_label.config(text="SPOT FOUND", fg="white")
 
 
 def toggle_help(event=None):
@@ -587,7 +610,7 @@ def edit_pool():
         if not (0 <= event.x < matrix_size or not 0 <= event.y < matrix_size):
 
             return
-        adjusted_y = event.y - 11
+        adjusted_y = event.y - 10
         if adjusted_y < 0:
 
             return
@@ -709,18 +732,18 @@ def edit_pool():
         diagonal_combos = set()
         click_mode = None
         edit_pool_label_local.config(text=f"COMBOS POOL ({len(selected_combos)})")
-    canvas.create_rectangle(2, 1, matrix_size, 13, fill="white", outline=border_color)
+    canvas.create_rectangle(2, 0, matrix_size, 12, fill=None, outline=border_color)
     edit_pool_frame_local = tk.Frame(canvas, bd=0, highlightthickness=0)
-    edit_pool_frame_local.place(relx=0.35, rely=0.005)
+    edit_pool_frame_local.place(relx=0.36, y=1)
     edit_pool_label_local = tk.Label(edit_pool_frame_local, pady=0, bd=0, highlightthickness=0, text=f"COMBOS POOL ({len(selected_combos)})", font=("Arial", 7,  "bold"), bg="white", fg='black')
-    edit_pool_label_local.pack()
+    edit_pool_label_local.pack(pady=0)
     for row in range(matrix_length):
         for column in range(matrix_length):
             combo = combos_matrix[row][column]
             combo_bg_color = fill_color if combo in selected_combos else None
             combo_x0 = (column * cell_size) + 2
             combo_x1 = combo_x0 + cell_size
-            combo_y0 = (row * cell_size) + 2 + 11
+            combo_y0 = (row * cell_size) + 2 + 10
             combo_y1 = combo_y0 + cell_size
             canvas.create_rectangle(combo_x0, combo_y0, combo_x1, combo_y1, fill=combo_bg_color, outline=border_color, tags=f'{combo}_cell')
             canvas.create_text(combo_x0 + (cell_size // 2), combo_y0 + (cell_size // 2), text=combo)
@@ -817,7 +840,7 @@ def show_selected_spot_treeview(event=None):
     try:
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
     except:
-        status_label.config(text="NOT FOUND")
+        status_label.config(text="SPOT NOT FOUND", fg="white")
 
         return
     mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
@@ -831,6 +854,14 @@ def show_selected_spot_treeview(event=None):
     help_label.config(image=chart_tk)
     help_label.image = chart_tk
     current_pool = pool
+    status_label.config(text="SPOT FOUND", fg="white")
+
+
+def show_clock():
+    if clock_var.get():
+        clock_label.pack(side="left")
+    else:
+        clock_label.pack_forget()
 
 
 
@@ -858,6 +889,11 @@ limit_type_var = tk.StringVar(root, value="hands")
 limit_value_var = tk.StringVar(root, value="inf")
 show_part_results = tk.BooleanVar(value=True)
 show_curr_results = tk.BooleanVar(value=True)
+roles_var = tk.StringVar(value="custom")
+dealing_options_var = tk.StringVar(value="per combo")
+precision_var = tk.StringVar(value="precise")
+freeze_var = tk.StringVar(value="never")
+show_results_var = tk.StringVar(value="both")
 
 # MAIN FRAME
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg='#ffffff')
@@ -949,10 +985,78 @@ choosen_spots_list.column("#4", width=54)
 choosen_spots_list.column("#5", width=1)
 choosen_spots_list.pack(side="left")
 
+roles_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+roles_frame.place(relx=0.5, rely=0.665, anchor="center")
+roles_label = tk.Label(roles_frame, fg="white", bg=bgd_color, text="ROLE:", font=("Arial", 12, "bold"))
+roles_label.pack(side="left")
+roles_dropdown = ttk.Combobox(roles_frame, background=bgd_color, justify="center", textvariable=roles_var, values=roles_options, width=10, state="readonly", height=5)
+roles_dropdown.pack(side="left")
+
+dealing_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+dealing_opt_frame.place(relx=0.5, rely=0.705, anchor="center")
+dealing_opt_label = tk.Label(dealing_opt_frame, fg="white", bg=bgd_color, text="DEALING:", font=("Arial", 12, "bold"))
+dealing_opt_label.pack(side="left")
+dealing_opt_dropdown = ttk.Combobox(dealing_opt_frame, background=bgd_color, justify="center", textvariable=dealing_options_var, values=dealing_options, width=10, state="readonly", height=5)
+dealing_opt_dropdown.pack(side="left")
+
+precision_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+precision_frame.place(relx=0.5, rely=0.744, anchor="center")
+precision_label = tk.Label(precision_frame, fg="white", bg=bgd_color, text="PRECISION:", font=("Arial", 12, "bold"))
+precision_label.pack(side="left")
+precision_dropdown = ttk.Combobox(precision_frame, background=bgd_color, justify="center", textvariable=precision_var, values=precisions, width=8, state="readonly", height=5)
+precision_dropdown.pack(side="left")
+
+limits_frame = tk.Frame(options_frame, width=options_frame_width, background=bgd_color)
+limits_frame.place(relx=0.5, rely=0.784, anchor="center")
+limit_label = tk.Label(limits_frame, fg='white', bg=bgd_color, pady=0, text="LIMIT:", font=("Arial", 12, "bold"))
+limit_label.pack(side="left")
+combo_pool_type_dropdown = ttk.Combobox(limits_frame, justify="center", textvariable=limit_type_var, values=limits_types, width=7, state="readonly", height=5)
+combo_pool_type_dropdown.pack(side="left")
+limit_value_entry = tk.Entry(limits_frame, textvariable=limit_value_var, width=5, justify='center')
+limit_value_entry.pack(side="left")
+
+freeze_opt_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+freeze_opt_frame.place(relx=0.5, rely=0.824, anchor="center")
+freeze_label = tk.Label(freeze_opt_frame, fg="white", bg=bgd_color, text="FREEZE:", font=("Arial", 12, "bold"))
+freeze_label.pack(side="left")
+freeze_dropdown = ttk.Combobox(freeze_opt_frame, background=bgd_color, justify="center", textvariable=freeze_var, values=freeze_options, width=15, state="readonly", height=5)
+freeze_dropdown.pack(side="left")
+
+show_rtresults_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color)
+show_rtresults_frame.place(relx=0.5, rely=0.864, anchor="center")
+show_rtresults_label = tk.Label(show_rtresults_frame, fg="white", bg=bgd_color, text="RTR SHOW:", font=("Arial", 12, "bold"))
+show_rtresults_label.pack(side="left")
+show_rtresults_dropdown = ttk.Combobox(show_rtresults_frame, background=bgd_color, justify="center", textvariable=show_results_var, values=show_results_option, width=8, state="readonly", height=5)
+show_rtresults_dropdown.pack(side="left")
+
+help_pool_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+help_pool_frame.place(relx=0.51, rely=0.8973, anchor="center")
+h_key_label = tk.Label(help_pool_frame, pady=0, text="<h> - HELP", font=("Arial", 9))
+h_key_label.pack(side='left', pady=0, padx=(0,5))
+p_key_label = tk.Label(help_pool_frame, pady=0, text="<p> - POOL", font=("Arial", 9))
+p_key_label.pack(side='right', pady=0, padx=(5,0))
+
+start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
+start_stop_btns_frame.place(relx=0.51, rely=0.93, anchor="center")
+start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START")#, command=start_trainer)
+start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
+pause_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="PAUSE")#, command=pause_trainer)
+pause_trainer_buttom.grid(row=0, column=1, padx=(0, 15))
+stop_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="STOP")#, command=stop_trainer)
+stop_trainer_buttom.grid(row=0, column=2)
+
 status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
 status_frame.place(relx=0.5, rely=0.9632, anchor="center")
 status_label = tk.Label(status_frame, bd=0, bg=bgd_color, text="STOPPED", foreground=stopped_color, font=("Arial", 12, "bold"))
 status_label.pack()
+
+clock_frame = tk.Frame(options_frame, width=options_frame_width, height=25, bg=bgd_color, bd=0, pady=0, highlightthickness=0)
+clock_frame.place(relx=0.5, rely=0.99, anchor="center")
+clock_frame.pack_propagate(False)
+clock_check_btn = tk.Checkbutton(clock_frame, bd=0, highlightthickness=0, command=show_clock, variable=clock_var, text="show clock", foreground="white", selectcolor="black", bg=bgd_color)
+clock_check_btn.pack(side="left")
+clock_label = tk.Label(clock_frame, width=16, bd=0, font=("Consolas", 12), foreground="white", bg=bgd_color)
+clock_label.pack(side="left")
 
 # CHARTS FRAME
 charts_frame = tk.Frame(root, width=charts_frame_width, height=charts_frame_height, bg=bgd_color)
@@ -976,7 +1080,10 @@ show_password.bind("<ButtonRelease-1>", show_password_release)
 show_password.bind("<Leave>", show_password_leave)
 spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
 hero_position_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
-
+root.bind("h", toggle_help)
+root.bind("p", toggle_pool)
+h_key_label.bind("<Button-1>", toggle_help)
+p_key_label.bind("<Button-1>", toggle_pool)
 choosen_spots_list.bind("<<TreeviewSelect>>", lambda event: show_selected_spot_treeview())
 
 depth_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
@@ -984,7 +1091,7 @@ folder_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_p
 hero_position_var.trace_add("write", lambda *args: (preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get())))
 spot_action_text_var.trace_add("write", lambda *args: (preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()), pool_type_from_spot()))
 villain_position_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
-combo_pool_type_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+combo_pool_type_var.trace_add("write", lambda *args: (preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()), pool_vars_from_pool_type()))
 combo_pool_var_1.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
 combo_pool_var_2.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
 

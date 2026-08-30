@@ -574,7 +574,6 @@ def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev
                 continue
             # print(combos_dict[combo][1])
             if any(v[0] > percent for k, v in combos_dict[combo][1].items() if k != "Fold"):
-                print(combo, percent)
                 pool.append(combo)
         if int(pool_var_2) > 0:
             remaining_combos = combos_order[combos_order.index(pool[-1]) + 1:]
