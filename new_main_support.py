@@ -535,14 +535,12 @@ def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev
     if "tot" in pool_type:
         percent = float(pool_var_1) / 100
         goal = spot_total_ev * percent
-        # print(f"{goal = }")
         accumulated = 0
         for combo in combos_order:
             if combo in prefolded_combos:
 
                 continue
             combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
-            print(combo, combo_ev_max, accumulated, goal)
             if (accumulated < goal and combo_ev_max >= 0) or (accumulated == goal and combo_ev_max == 0):
                 accumulated = normalize_float(accumulated + combo_ev_max)
                 pool.append(combo)
@@ -552,41 +550,50 @@ def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev
                 pool.append(remaining_combos[i])
 
         return pool
-    # elif "max" in pool_format:
-    #     percent = float(pool_format.split("-")[1])
-    #     percent =  percent / 100 if (100 >= percent > 1) else percent
-    #     goal = spot_max_ev * percent
-    #     negative_goal = -goal
-    #     # print(f"{goal = }")
-    #     # print(f"{negative_goal = }")
-    #     for combo in combos_order:
-    #         if combo in prefolded_combos:
+    elif "max" in pool_type:
+        percent = float(pool_var_1) / 100
+        goal = spot_max_ev * percent
+        for combo in combos_order:
+            if combo in prefolded_combos:
 
-    #             continue
-    #         combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
-    #         if goal >= combo_ev_max >= negative_goal:
-    #             pool.append(combo)
+                continue
+            combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
+            if combo_ev_max >= goal:
+                pool.append(combo)
+        if int(pool_var_2) > 0:
+            remaining_combos = combos_order[combos_order.index(pool[-1]) + 1:]
+            for i in range(int(pool_var_2)):
+                pool.append(remaining_combos[i])
 
-    #     return pool
-    # elif "bd" in pool_format:
-    #     percent = float(pool_format.split("-")[1])
-    #     percent =  percent / 100 if (100 >= percent > 1) else percent
-    #     factor = float(pool_format.split("-")[2])
-    #     factor =  factor / 100 if (100 >= factor > 1) else factor
-    #     goal = spot_max_ev * percent
-    #     negative_goal = -(goal * factor)
-    #     # print(f"{goal = }")
-    #     # print(f"{negative_goal = }")
-    #     for combo in combos_order:
-    #         if combo in prefolded_combos:
+        return pool
+    elif "freq more than" in pool_type:
+        percent = int(pool_var_1)
+        for combo in combos_order:
+            if combo in prefolded_combos:
 
-    #             continue
-    #         combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
-    #         if goal >= combo_ev_max >= negative_goal:
-    #             pool.append(combo)
+                continue
+            # print(combos_dict[combo][1])
+            if any(v[0] > percent for k, v in combos_dict[combo][1].items() if k != "Fold"):
+                print(combo, percent)
+                pool.append(combo)
+        if int(pool_var_2) > 0:
+            remaining_combos = combos_order[combos_order.index(pool[-1]) + 1:]
+            for i in range(int(pool_var_2)):
+                pool.append(remaining_combos[i])
 
-    #     return pool
-    # else:
-    #     pool = [c for c in combos_order if c not in prefolded_combos]
+        return pool
+    elif "bd" in pool_type:
+        percent = float(pool_var_1) / 100
+        factor = float(pool_var_2) / 100
+        goal = spot_max_ev * percent
+        negative_goal = -(goal * factor)
+        for combo in combos_order:
+            if combo in prefolded_combos:
 
-    #     return pool
+                continue
+            combo_ev_max = max(v[1] for k, v in combos_dict[combo][1].items() if k != "Fold")
+            if goal >= combo_ev_max >= negative_goal:
+                pool.append(combo)
+
+        return pool
+   

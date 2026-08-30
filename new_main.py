@@ -282,7 +282,7 @@ pool_visible = True
 edit_canvas = None
 
 current_pool = []
-spots = dict()
+pools = dict()
 
 root_width, root_height = 1356, 667
 
@@ -336,7 +336,7 @@ depths = ["200", "160", "130", "100", "80", "70", "60", "55", "50", "45", "40", 
 one_to_hundred = [i for i in range(101)]
 positions = ["UTG", "UTG1", "LJ", "HJ", "CO", "BTN", "SB", "BB"]
 spot_actions_text = ["rfi", "vs_rfi", "vs_open_shove", "vs_3bet_nai_low", "vs_3bet_ai", "vs_limp", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]
-combo_pool_types = ["tot"]
+combo_pool_types = ["tot", "max", "freq more than", "bd"]
 limits_types = ["hands", "time (s)", "all pool"]
 possible_villains = ["None"]
 folder_options = ["Chip EV"]
@@ -460,11 +460,28 @@ def add_user_toplevel():
     su_show_password_label_conf.bind("<ButtonPress-1>", su_show_password_press_2)
     su_show_password_label_conf.bind("<ButtonRelease-1>", su_show_password_release_2)
     su_show_password_label_conf.bind("<Leave>", su_show_password_leave_2)
+
+
+def pool_type_from_spot(event=None):
+    if spot_action_text_var.get() == "rfi":
+        combo_pool_type_var.set("bd")
+        combo_pool_var_1.set("1")
+        combo_pool_var_2.set("70")
+    else:
+        combo_pool_type_var.set("freq more than")
+        combo_pool_var_1.set("0")
+        combo_pool_var_2.set("0")
+        
     
 
 def preview_pool(depth, hero, spot, villain, folder, pool_type, pool_var_1, pool_var_2):
     global current_pool
-    mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
+    try:
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
+    except:
+        status_label.config(text="NOT FOUND")
+
+        return
     mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
     pool = get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos)
     pool_chart = draw_pool_chart(pool)
@@ -498,6 +515,26 @@ def toggle_pool(event=None):
     pool_visible = not pool_visible
 
 
+def get_possible_villains(selected=None):
+    if hero_position_var.get() == "":
+        villains = ["None"]
+    else:
+        hero_idx = positions.index(hero_position_var.get())
+        positions_before = positions[:hero_idx]
+        positions_after = positions[hero_idx + 1:]
+        spot_action = spot_action_text_var.get()
+        if spot_action == "rfi":
+            villains = ["None"]
+        elif spot_action in ["vs_rfi", "vs_open_shove", "vs_limp"]:
+            villains = positions_before
+        elif spot_action in ["vs_3bet_nai_low", "vs_3bet_ai", "vs_raise_ai", "vs_raise_nai_low", "vs_raise_nai_low-med"]:
+            villains = positions_after
+        else:
+            villains = ["None"]
+    villain_position_dropdown["values"] = villains
+    # villain_position_var.set(villains[0])
+
+
 def toggle_edit_pool():
     if edit_pool_button["text"] == "EDIT POOL":
         edit_pool()
@@ -507,6 +544,25 @@ def toggle_edit_pool():
 
 def edit_pool():
     global current_pool, edit_canvas
+    all_dropdowns = [
+        folder_dropdown,
+        depth_dropdown,
+        hero_position_dropdown,
+        spot_action_text_dropdown,
+        villain_position_dropdown,
+        combo_pool_type_dropdown,
+        spot_action_entry_1,
+        spot_action_entry_2
+    ]
+    for dropdown in all_dropdowns:
+        dropdown.config(state="disabled")
+    solutions_buttons = [
+        add_solution_buttom,
+        del_solution_buttom,
+        del_all_buttom
+    ]
+    for button in solutions_buttons:
+        button.config(state="disabled")
     edit_pool_button.config(text="END EDIT")
     selected_combos = set()
     for combo in current_pool:
@@ -524,14 +580,18 @@ def edit_pool():
     matrix_size = (matrix_length * cell_size) + 1
     fill_color = '#8a8a2d'
     border_color = "#000000"
-    canvas = tk.Canvas(charts_frame, width=matrix_size, height=matrix_size)
-    canvas.place(x=0, y=333)
+    canvas = tk.Canvas(charts_frame, bd=0, highlightthickness=0, width=matrix_size, height=matrix_size + 11)
+    canvas.place(x=-2, y=333)
     edit_canvas = canvas
     def get_click_row_col(event: tk.Event):
-        if not (0 <= event.x < matrix_size and 0 <= event.y < matrix_size):
+        if not (0 <= event.x < matrix_size or not 0 <= event.y < matrix_size):
 
             return
-        row = event.y // cell_size
+        adjusted_y = event.y - 11
+        if adjusted_y < 0:
+
+            return
+        row = adjusted_y // cell_size
         col = event.x // cell_size
 
         return row, col
@@ -602,6 +662,7 @@ def edit_pool():
 
         return combos
     def mouse_click(event: tk.Event):
+        global current_pool
         nonlocal  click_mode
         row, col = get_click_row_col(event)
         abs_row_col = abs(row - col)
@@ -615,10 +676,12 @@ def edit_pool():
                     click_mode = "select"
                     canvas.itemconfig(f"{combo}_cell", fill=fill_color)
                     selected_combos.add(combo)
+                    current_pool.append(combo)
                 else:
                     click_mode = "unselect"
                     canvas.itemconfig(f"{combo}_cell", fill="")
                     selected_combos.remove(combo)
+                    current_pool.remove(combo)
     def mouse_drag(event: tk.Event):
         row, col = get_click_row_col(event)
         abs_row_col = abs(row - col)
@@ -635,21 +698,29 @@ def edit_pool():
                 if combo not in selected_combos and click_mode == "select":
                     canvas.itemconfig(f"{combo}_cell", fill=fill_color)
                     selected_combos.add(combo)
+                    current_pool.append(combo)
                 elif combo in selected_combos and click_mode == "unselect":
                     canvas.itemconfig(f"{combo}_cell", fill="")
                     selected_combos.remove(combo)
+                    current_pool.remove(combo)
     def mouse_release(_):
         nonlocal current_selection, diagonal_combos, click_mode
         current_selection = set()
         diagonal_combos = set()
         click_mode = None
+        edit_pool_label_local.config(text=f"COMBOS POOL ({len(selected_combos)})")
+    canvas.create_rectangle(2, 1, matrix_size, 13, fill="white", outline=border_color)
+    edit_pool_frame_local = tk.Frame(canvas, bd=0, highlightthickness=0)
+    edit_pool_frame_local.place(relx=0.35, rely=0.005)
+    edit_pool_label_local = tk.Label(edit_pool_frame_local, pady=0, bd=0, highlightthickness=0, text=f"COMBOS POOL ({len(selected_combos)})", font=("Arial", 7,  "bold"), bg="white", fg='black')
+    edit_pool_label_local.pack()
     for row in range(matrix_length):
         for column in range(matrix_length):
             combo = combos_matrix[row][column]
             combo_bg_color = fill_color if combo in selected_combos else None
             combo_x0 = (column * cell_size) + 2
             combo_x1 = combo_x0 + cell_size
-            combo_y0 = (row * cell_size) + 2
+            combo_y0 = (row * cell_size) + 2 + 11
             combo_y1 = combo_y0 + cell_size
             canvas.create_rectangle(combo_x0, combo_y0, combo_x1, combo_y1, fill=combo_bg_color, outline=border_color, tags=f'{combo}_cell')
             canvas.create_text(combo_x0 + (cell_size // 2), combo_y0 + (cell_size // 2), text=combo)
@@ -659,9 +730,107 @@ def edit_pool():
 
 
 def end_edit():
+    all_dropdowns = [
+        folder_dropdown,
+        depth_dropdown,
+        hero_position_dropdown,
+        spot_action_text_dropdown,
+        villain_position_dropdown,
+        combo_pool_type_dropdown,
+        spot_action_entry_1,
+        spot_action_entry_2
+    ]
+    for dropdown in all_dropdowns:
+        dropdown.config(state="readonly")
+    solutions_buttons = [
+        add_solution_buttom,
+        del_solution_buttom,
+        del_all_buttom
+    ]
+    for button in solutions_buttons:
+        button.config(state="normal")
     global current_pool, edit_canvas
     edit_pool_button.config(text="EDIT POOL")
     edit_canvas.destroy()
+    pool_chart = draw_pool_chart(current_pool)
+    pool_chart_tk = ImageTk.PhotoImage(pool_chart)
+    pool_label.config(image=pool_chart_tk)
+    pool_label.image = pool_chart_tk
+
+
+def add_solution():
+    global pools
+    options = [
+        depth_var.get(),
+        hero_position_var.get(),
+        spot_action_text_var.get(),
+        villain_position_var.get(),
+        combo_pool_type_var.get(),
+        folder_var.get().replace(" ", "").lower()
+    ]
+    try:
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(options[0], options[1], options[2], options[3], options[5])
+    except:
+        status_label.config(text="NOT FOUND")
+        return
+    values = (options[0], options[1], options[2], options[3], options[5])
+    for item in choosen_spots_list.get_children():
+        if choosen_spots_list.item(item, "values") == values:
+            return
+    spot_id = choosen_spots_list.insert("", "end", values=values)
+    pools[spot_id] = current_pool
+
+
+def delete_solution():
+    global pools
+    selected_items = choosen_spots_list.selection()
+    if not selected_items:
+
+        return
+    for spot_id in selected_items:
+        pools.pop(spot_id, None)
+        choosen_spots_list.delete(spot_id)
+
+
+def delete_all_solutions():
+    global pools
+    for spot_id in choosen_spots_list.get_children():
+        choosen_spots_list.delete(spot_id)
+    pools.clear()
+
+
+def show_selected_spot_treeview(event=None):
+    global current_pool
+    selected = choosen_spots_list.selection()
+    if not selected:
+
+        return
+    spot_id = selected[0]
+    item = choosen_spots_list.item(spot_id)
+    values = item["values"]
+    depth = values[0]
+    hero = values[1]
+    villain = values[3]
+    spot = values[2]
+    folder = values[4]
+    pool = pools[spot_id]
+    try:
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, folder)
+    except:
+        status_label.config(text="NOT FOUND")
+
+        return
+    mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
+    pool_chart = draw_pool_chart(pool)
+    pool_chart_tk = ImageTk.PhotoImage(pool_chart)
+    pool_label.config(image=pool_chart_tk)
+    pool_label.image = pool_chart_tk
+    combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos_final = parse_data(mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+    chart = draw_proof_chart(combo_colors_info_dict, spot_actions_text_colors, combos_order, fold_combos_final)
+    chart_tk = ImageTk.PhotoImage(chart)
+    help_label.config(image=chart_tk)
+    help_label.image = chart_tk
+    current_pool = pool
 
 
 
@@ -679,9 +848,9 @@ depth_var = tk.StringVar(root, value="50")
 hero_position_var = tk.StringVar(root, value="UTG")
 spot_action_text_var = tk.StringVar(root, value="rfi")
 villain_position_var = tk.StringVar(root, value="None")
-combo_pool_type_var = tk.StringVar(root, value="tot")
-combo_pool_var_1 = tk.StringVar(root, value="100")
-combo_pool_var_2 = tk.StringVar(root, value="0")
+combo_pool_type_var = tk.StringVar(root, value="bd")
+combo_pool_var_1 = tk.StringVar(root, value="1")
+combo_pool_var_2 = tk.StringVar(root, value="70")
 action_selected = tk.BooleanVar(value=False)
 clock_var = tk.BooleanVar(value=True)
 pause_each_var = tk.StringVar(value="never")
@@ -754,28 +923,30 @@ edit_pool_button.pack()
 
 solutions_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 solutions_btns_frame.place(relx=0.5, rely=0.37, anchor="center")
-add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT")#, command=add_solution)
+add_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="ADD SPOT", command=add_solution)
 add_solution_buttom.grid(row=3, column=0, padx=(0,5), pady=0)
-del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT")#, command=delete_solution)
+del_solution_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL SPOT", command=delete_solution)
 del_solution_buttom.grid(row=3, column=1, padx=(0,5), pady=0)
-del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL")#, command=delete_all_solution)
+del_all_buttom = tk.Button(solutions_btns_frame, bd=0, pady=0, padx=5, text="DEL ALL", command=delete_all_solutions)
 del_all_buttom.grid(row=3, column=2, pady=0)
 
 choosen_spots_frame = tk.Frame(options_frame, width=options_frame_width)
-choosen_spots_frame.place(relx=0.5, rely=0.515, anchor="center")
-scrollbar = tk.Scrollbar(choosen_spots_frame, orient="vertical")
+choosen_spots_frame.place(x=111, rely=0.515, anchor="center")
+scrollbar = tk.Scrollbar(choosen_spots_frame, orient="vertical", width=5)
 scrollbar.pack(side="right", fill="y")
-choosen_spots_list = ttk.Treeview(choosen_spots_frame, height=7, columns=("col1", "col2", "col3", "col4"))
+choosen_spots_list = ttk.Treeview(choosen_spots_frame, height=7, columns=("col1", "col2", "col3", "col4", "col5"))
 choosen_spots_list.heading("#0", text="")
 choosen_spots_list.heading("#1", text="bb")
 choosen_spots_list.heading("#2", text="HERO")
-choosen_spots_list.heading("#3", text="VIL.")
-choosen_spots_list.heading("#4", text="SPOT")
+choosen_spots_list.heading("#3", text="SPOT")
+choosen_spots_list.heading("#4", text="VIL.")
+choosen_spots_list.heading("#5", text="CM")
 choosen_spots_list.column("#0", width=1, stretch=tk.NO)
 choosen_spots_list.column("#1", width=31)
-choosen_spots_list.column("#2", width=40)
-choosen_spots_list.column("#3", width=40)
-choosen_spots_list.column("#4", width=106)
+choosen_spots_list.column("#2", width=38)
+choosen_spots_list.column("#3", width=102)
+choosen_spots_list.column("#4", width=54)
+choosen_spots_list.column("#5", width=1)
 choosen_spots_list.pack(side="left")
 
 status_frame = tk.Frame(options_frame, width=options_frame_width, height=30, bg=bgd_color)
@@ -803,11 +974,15 @@ root.bind("p", toggle_pool)
 show_password.bind("<ButtonPress-1>", show_password_press)
 show_password.bind("<ButtonRelease-1>", show_password_release)
 show_password.bind("<Leave>", show_password_leave)
+spot_action_text_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
+hero_position_dropdown.bind("<<ComboboxSelected>>", lambda event: get_possible_villains())
+
+choosen_spots_list.bind("<<TreeviewSelect>>", lambda event: show_selected_spot_treeview())
 
 depth_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
 folder_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
-hero_position_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
-spot_action_text_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
+hero_position_var.trace_add("write", lambda *args: (preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get())))
+spot_action_text_var.trace_add("write", lambda *args: (preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()), pool_type_from_spot()))
 villain_position_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
 combo_pool_type_var.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
 combo_pool_var_1.trace_add("write", lambda *args: preview_pool(depth_var.get(), hero_position_var.get(), spot_action_text_var.get(), villain_position_var.get(), folder_var.get(), combo_pool_type_var.get(), combo_pool_var_1.get(), combo_pool_var_2.get()))
