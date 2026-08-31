@@ -5,6 +5,8 @@ import re
 import bcrypt
 from tkinter import ttk
 from PIL import ImageTk
+import random
+from math import ceil
 from Seat import *
 from new_main_support import *
 
@@ -56,7 +58,6 @@ def load_database():
                 date TEXT NOT NULL,
                 start_time TEXT NOT NULL,
                 end_time TEXT,
-                combos_pool TEXT,
                 hands_trained INTEGER DEFAULT 0,
                 right_hands INTEGER DEFAULT 0,
                 imprecise_hands INTEGER DEFAULT 0,
@@ -67,11 +68,26 @@ def load_database():
             )
         """)
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS trainings_spots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                training_id INTEGER NOT NULL,
+                spot TEXT,
+                combos_pool TEXT,
+                spot_hands_trained INTEGER DEFAULT 0,
+                spot_right_hands INTEGER DEFAULT 0,
+                spot_imprecise_hands INTEGER DEFAULT 0,
+                spot_wrong_hands INTEGER DEFAULT 0,
+                spot_train_accuracy REAL,
+                spot_train_ev_loss REAL,
+                FOREIGN KEY (training_id) REFERENCES trainings(id)
+            )
+        """)
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS hands (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 training_id INTEGER NOT NULL,
-                spot TEXT,
+                chip_mode TEXT,
                 combo TEXT,
                 hand TEXT,
                 user_decision TEXT,
@@ -272,6 +288,126 @@ def logout():
 
 
 # ===================================
+# ------- TRAINING VARIABLES -------
+# ===================================
+training = False
+
+
+
+# ===================================
+# ------- TRAINING FUNCTIONS -------
+# ===================================
+def continue_training(event):
+    training_continue.set(True)
+
+
+def get_right_action_precise_frequency(combo_info: dict):
+    sorted_dict = dict(sorted(combo_info.items(), key=lambda item: item[1][0]))
+    accumulated = 0
+    carry = 0.0
+    actions_range = {}
+    last_index = len(combo_info) - 1
+    for i, (action, data) in enumerate(sorted_dict.items()):
+        freq = data[0]
+        carry = ceil(carry)
+        if carry > 0:
+            carry += 1
+        if i != last_index:
+            actions_range[action] = [freq + accumulated, carry, int(freq)]
+        else:
+            actions_range[action] = [freq + accumulated, carry, 100]
+        carry = freq
+        accumulated += freq
+    rng = random.random() * 100
+    right_action = None
+    for k, v in actions_range.items():
+        if rng < v[0]:
+            right_action = k
+            break
+    if not right_action:
+        right_action = list(sorted_dict.keys())[-1]
+    final_rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
+
+    return right_action, final_rng
+
+
+def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text):
+    right_action_freq = [v[0] for k, v in combo_info.items() if k == right_action][0]
+    line1 = ""
+    line2 = ""
+    line1 += f"🎯{action_choosed} "
+    right_action_ev = [v[1] for k, v in combo_info.items() if k == right_action][0]
+    action_choosed_freq = [v[0] for k, v in combo_info.items() if k == action_choosed][0]
+    action_choosed_ev = [v[1] for k, v in combo_info.items() if k == action_choosed][0]
+    line1 += f"✅{right_action}  "
+    line2 += f"{combo} | RNG: {rng}     "
+    for i, (action, data) in enumerate(combo_info.items()):
+        line2 += f"{action}: {data}"
+        if i < len(combo_info) - 1:
+            line2 += "  |  "
+    if action_choosed == right_action:
+        answer_color = "green"
+        answer_text_color = "white"
+        line1 += f"   {spot_text}   👉 RIGHT ANSWER 👈   Acc/EVloss: (1 / 0)"
+        update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
+        
+        return 1, 0, right_action_ev
+    else:
+        freq_spread = normalize_float(1 - ((right_action_freq - action_choosed_freq) / 100), 4) if right_action_freq > action_choosed_freq else normalize_float(1 - ((action_choosed_freq - right_action_freq) / 100), 4)
+        ev_spread = normalize_float(action_choosed_ev - right_action_ev) if right_action_ev > action_choosed_ev else 0
+        if ev_spread == 0:
+            answer_color = "yellow"
+            answer_text_color = "black"
+            line1 += f"   {spot_text}   👉 IMPRECISE ANSWER 👈   Acc/EVloss: ({freq_spread} / {ev_spread})"
+        else:
+            answer_color = "red"
+            answer_text_color = "black"
+            line1 += f"   {spot_text}   👉 WRONG ANSWER 👈   Acc/EVloss: ({freq_spread} / {ev_spread})"
+        update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
+
+        return freq_spread, ev_spread, right_action_ev
+
+
+def play(pool, combos_dict):
+    combo = random.choice(pool)
+    combo_info = combos_dict[combo][1]
+    right_action, rng = get_right_action_precise_frequency(combo_info)
+
+
+def start_training():
+    global training
+    training = True
+    while training:
+        treeview_items = choosen_spots_list.get_children()
+        if not treeview_items:
+            add_solution()
+            treeview_items = choosen_spots_list.get_children()
+        if not treeview_items:
+            status_label.config(text="NO SPOT SELECTED")
+
+            return
+        spot_id = random.choice(treeview_items)
+        choosen_spots_list.selection_set(spot_id)
+        choosen_spots_list.see(spot_id)
+        pool = pools[spot_id]
+        spot_values = choosen_spots_list.item(spot_id, "values")
+        depth, hero, spot, villain, chip_mode = spot_values
+        mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, chip_mode)
+        mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
+        hero_idx = positions.index(spot_position)
+        positions_in_order = positions[hero_idx:] + positions[:hero_idx]
+        combo, freq_point, ev_point, right_action_ev = play(positions_in_order, pool, combos_order, mode_str, spot_string, spot_actions, mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict)
+
+        print(depth, hero, spot, villain, chip_mode)
+        print(pool)
+        status_label.config(text="PRESS ENTER TO CONTINUE")
+        root.bind("<Return>", continue_training)
+        training_continue.set(False)
+        root.wait_variable(training_continue)
+
+
+
+# ===================================
 # ------- ROOT VARIABLES -------
 # ===================================
 logged_in = False
@@ -352,7 +488,6 @@ roles_options = ["custom", "focus"]
 # ===================================
 # ------- ROOT FUNCTIONS -------
 # ===================================
-
 def show_password_press(event):
     password_entry.config(show="")
 
@@ -493,8 +628,6 @@ def pool_vars_from_pool_type(event=None):
         combo_pool_var_1.set("0")
         combo_pool_var_2.set("0")
 
-        
-    
 
 def preview_pool(depth, hero, spot, villain, folder, pool_type, pool_var_1, pool_var_2):
     global current_pool
@@ -864,6 +997,15 @@ def show_clock():
         clock_label.pack_forget()
 
 
+def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str, line1_text_color:str):
+    lr_canvas.delete("all")
+    line1_text = lr_canvas.create_text(last_result_line1_x, last_result_line1_y + 1, font=("Arial", 9, "bold"), text=line_1, fill=line1_text_color)
+    x1, y1, x2, y2 = lr_canvas.bbox(line1_text)
+    line1_rect = lr_canvas.create_rectangle(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=line1_color, outline="")
+    lr_canvas.tag_raise(line1_text, line1_rect)
+    lr_canvas.create_text(last_result_line2_x, last_result_line2_y, font=("Arial", 12, "bold"), text=line_2, fill="white")
+
+
 
 # ===================================
 # ------- MAIN ROOT -------
@@ -894,10 +1036,16 @@ dealing_options_var = tk.StringVar(value="per combo")
 precision_var = tk.StringVar(value="precise")
 freeze_var = tk.StringVar(value="never")
 show_results_var = tk.StringVar(value="both")
+training_continue = tk.BooleanVar(value=False)
 
 # MAIN FRAME
 main_frame = tk.Frame(root, width=main_frame_width, height=main_frame_height, bg='#ffffff')
 main_frame.pack(side="left", fill="both")
+
+last_result_frame = tk.Frame(main_frame, width=last_result_frame_width, height=last_result_frame_height, bg=bgd_color)
+last_result_frame.pack(side="bottom", fill="both")
+lr_canvas = tk.Canvas(last_result_frame, width=last_result_frame_width, height=last_result_frame_height, highlightthickness=0, bd=0, bg=bgd_color)
+lr_canvas.pack()
 
 # OPTIONS FRAME
 options_frame = tk.Frame(root, width=options_frame_width, height=options_frame_height, bg=bgd_color)
@@ -1038,7 +1186,7 @@ p_key_label.pack(side='right', pady=0, padx=(5,0))
 
 start_stop_btns_frame = tk.Frame(options_frame, width=options_frame_width, bg=bgd_color)
 start_stop_btns_frame.place(relx=0.51, rely=0.93, anchor="center")
-start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START")#, command=start_trainer)
+start_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="START", command=start_training)
 start_trainer_buttom.grid(row=0, column=0, padx=(0, 15))
 pause_trainer_buttom = tk.Button(start_stop_btns_frame, bd=0, pady=0, padx=5, text="PAUSE")#, command=pause_trainer)
 pause_trainer_buttom.grid(row=0, column=1, padx=(0, 15))
