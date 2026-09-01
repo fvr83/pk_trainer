@@ -595,4 +595,3 @@ def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev
                 pool.append(combo)
 
         return pool
-   
