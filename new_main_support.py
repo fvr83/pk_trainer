@@ -531,6 +531,7 @@ def draw_pool_chart(pool: set[str]):
 # ----- COMBOS POOL FUNCTIONS -----
 # ====================================
 def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos):
+    print(pool_type, pool_var_1, pool_var_2)
     pool = []
     if "tot" in pool_type:
         percent = float(pool_var_1) / 100
@@ -595,3 +596,15 @@ def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev
                 pool.append(combo)
 
         return pool
+
+
+def get_hands_from_combo(combo: str) -> list[str]:
+    if (combo[0] == combo[1]) and (len(combo) == 2):
+
+        return [f"{combo[0]}{s_1}{combo[1]}{s_2}" for s_1 in suits for s_2 in suits[suits.index(s_1) + 1:]]
+    elif (combo[2] == "s") and len(combo) == 3:
+
+        return [f"{combo[0]}{s}{combo[1]}{s}" for s in suits]
+    elif (combo[2] == "o") and len(combo) == 3:
+
+        return [f"{combo[0]}{s_1}{combo[1]}{s_2}" for s_1 in suits for s_2 in suits if s_1 != s_2]

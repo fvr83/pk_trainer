@@ -24,6 +24,7 @@ def get_combo_family(combo):
 class Seat():
     def __init__(self, index, canvas: tk.Canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y, combo, positions_in_order, pot_odds_and_stacks, positions_actions):
         self.canvas = canvas
+        self.hand = None
         self.index = index
         self.position = "UTG1" if not positions_in_order else positions_in_order[index]
         self.stack = pot_odds_and_stacks[1][self.position]
@@ -88,6 +89,7 @@ class Seat():
         card_height = int(card_width * 1.36)
         hands_avaliable = get_combo_family(combo)
         hand_str = random.choice(hands_avaliable)
+        self.hand = hand_str
         x0 = self.cards_center_x - total_width / 2
         y0 = (self.cards_center_y - card_height / 2) + 2
         cards = [hand_str[:2], hand_str[2:]]

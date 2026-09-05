@@ -8,6 +8,7 @@ from PIL import ImageTk
 import random
 from math import ceil
 import time
+from datetime import datetime
 from Seat import *
 from new_main_support import *
 
@@ -17,6 +18,9 @@ from new_main_support import *
 # ------- SQL VARIABLES -------
 # ===================================
 database_file = "db_trainer.db"
+logged_user_id = None
+training_id = None
+spots_ids = {}
 
 
 
@@ -65,6 +69,7 @@ def load_database():
                 wrong_hands INTEGER DEFAULT 0,
                 train_accuracy REAL,
                 train_ev_loss REAL,
+                train_total_ev REAL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
@@ -73,14 +78,19 @@ def load_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 training_id INTEGER NOT NULL,
-                spot TEXT,
-                combos_pool TEXT,
+                spot_chipmode TEXT,
+                spot_depth TEXT,
+                spot_hero TEXT,
+                spot_action TEXT,
+                spot_villain TEXT,
                 spot_hands_trained INTEGER DEFAULT 0,
                 spot_right_hands INTEGER DEFAULT 0,
                 spot_imprecise_hands INTEGER DEFAULT 0,
                 spot_wrong_hands INTEGER DEFAULT 0,
                 spot_train_accuracy REAL,
                 spot_train_ev_loss REAL,
+                spot_train_total_ev REAL,
+                combos_pool TEXT,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (training_id) REFERENCES trainings(id) ON DELETE CASCADE
             )
@@ -99,6 +109,7 @@ def load_database():
                 decision_time REAL,
                 accuracy REAL,
                 ev_loss REAL,
+                right_action_ev REAL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (trainings_spots_id) REFERENCES trainings_spots(id) ON DELETE CASCADE
             )
@@ -133,8 +144,8 @@ def add_user(top_level, user_name: str, password, password_conf, name, str_name,
     if not re.fullmatch(r"[A-Za-z0-9_]+", user_name):
         messagebox.showwarning("Invalid username", "Username may contain only letters, numbers and underscores.", parent=top_level)
         return
-    if len(password) < 8:
-        messagebox.showwarning("Invalid password", "Password must contain at least 8 characters.", parent=top_level)
+    if len(password) < 3:
+        messagebox.showwarning("Invalid password", "Password must contain at least 3 characters.", parent=top_level)
         return
     if password != password_conf:
         messagebox.showwarning("Password mismatch", "Password and password confirmation do not match.", parent=top_level)
@@ -285,6 +296,194 @@ def logout():
     del_usr_button.config(state="normal")
 
 
+def add_training():
+    global training_id
+    reset_training_stats()
+    conn = sqlite3.connect(database_file)
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        cursor = conn.cursor()
+        now = datetime.now()
+        cursor.execute("""
+            INSERT INTO trainings (
+                user_id,
+                date,
+                start_time
+            )
+            VALUES (?, ?, ?)
+        """, (
+            logged_user_id,
+            now.strftime("%Y-%m-%d"),
+            now.strftime("%H:%M:%S")
+        ))
+        training_id = cursor.lastrowid
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def add_training_spots():
+    global training_id
+    spots_ids.clear()
+    conn = sqlite3.connect(database_file)
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        cursor = conn.cursor()
+        for item_id in choosen_spots_list.get_children():
+            spots_stats_dict_setdefault(item_id)
+            values = choosen_spots_list.item(item_id, "values")
+            depth = values[0]
+            hero = values[1]
+            spot_action = values[2]
+            villain = values[3]
+            chipmode = values[4]
+            pool = pools[item_id]
+            cursor.execute("""
+                INSERT INTO trainings_spots (
+                    user_id,
+                    training_id,
+                    spot_chipmode,
+                    spot_depth,
+                    spot_hero,
+                    spot_action,
+                    spot_villain,
+                    combos_pool
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                logged_user_id,
+                training_id,
+                chipmode,
+                depth,
+                hero,
+                spot_action,
+                villain,
+                ",".join(pool)
+            ))
+            spots_ids[item_id] = cursor.lastrowid
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def add_hand(item_id, chip_mode, combo, hand, user_decision, correct_decision, evaluation, decision_time, accuracy, ev_loss, right_action_ev):
+    conn = sqlite3.connect(database_file)
+    conn.execute("PRAGMA foreign_keys = ON")
+    spot_id = spots_ids[item_id]
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO hands (
+                user_id,
+                trainings_spots_id,
+                chip_mode,
+                combo,
+                hand,
+                user_decision,
+                correct_decision,
+                evaluation,
+                decision_time,
+                accuracy,
+                ev_loss,
+                right_action_ev
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            logged_user_id,
+            spot_id,
+            chip_mode,
+            combo,
+            hand,
+            user_decision,
+            correct_decision,
+            evaluation,
+            decision_time,
+            accuracy,
+            ev_loss,
+            right_action_ev
+        ))
+        conn.commit()
+    except:
+        print("Hand insertion failed!")
+    finally:
+        conn.close()
+
+
+def add_final_results():
+    conn = sqlite3.connect(database_file)
+    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        cursor = conn.cursor()
+        hands_trained = training_stats["hands_trained"]
+        if hands_trained > 0:
+            train_accuracy = normalize_float(
+                training_stats["freq_spread_total"] / hands_trained * 100,
+                2
+            )
+        else:
+            train_accuracy = 0
+        end_time = datetime.now().strftime("%H:%M:%S")
+        cursor.execute("""
+            UPDATE trainings
+            SET
+                end_time = ?,
+                hands_trained = ?,
+                right_hands = ?,
+                imprecise_hands = ?,
+                wrong_hands = ?,
+                train_accuracy = ?,
+                train_ev_loss = ?,
+                train_total_ev = ?
+            WHERE id = ? AND user_id = ?
+        """, (
+            end_time,
+            training_stats["hands_trained"],
+            training_stats["right_hands"],
+            training_stats["imprecise_hands"],
+            training_stats["wrong_hands"],
+            train_accuracy,
+            training_stats["ev_loss_total"],
+            training_stats["max_ev_total"],
+            training_id,
+            logged_user_id
+        ))
+        for item_id, spot_id in spots_ids.items():
+            stats = spots_stats[item_id]
+            hands_trained = stats["hands_trained"]
+            if hands_trained > 0:
+                spot_accuracy = normalize_float(
+                    stats["freq_spread_total"] / hands_trained * 100,
+                    2
+                )
+            else:
+                spot_accuracy = 0
+            cursor.execute("""
+                UPDATE trainings_spots
+                SET
+                    spot_hands_trained = ?,
+                    spot_right_hands = ?,
+                    spot_imprecise_hands = ?,
+                    spot_wrong_hands = ?,
+                    spot_train_accuracy = ?,
+                    spot_train_ev_loss = ?,
+                    spot_train_total_ev = ?
+                WHERE id = ? AND user_id = ?
+            """, (
+                stats["hands_trained"],
+                stats["right_hands"],
+                stats["imprecise_hands"],
+                stats["wrong_hands"],
+                spot_accuracy,
+                stats["ev_loss_total"],
+                stats["max_ev_total"],
+                spot_id,
+                logged_user_id
+            ))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 
 # ===================================
 # ------- TRAINING VARIABLES -------
@@ -294,12 +493,58 @@ clock_running = False
 clock_start_time = None
 clock_elapsed = 0
 paused = False
+last_action_right = False
+current_streak = 0
+max_streak = 0
+
+training_stats = {}
+spots_stats = {}
 
 
 
 # ===================================
 # ------- TRAINING FUNCTIONS -------
 # ===================================
+def update_streak(answer_result):
+    global last_action_right, current_streak, max_streak
+    if answer_result == "right":
+        if last_action_right == True:
+            current_streak += 1
+            max_streak = current_streak if current_streak > max_streak else max_streak
+        else:
+            last_action_right = True
+    else:
+        last_action_right = False
+        current_streak = 0
+
+
+def reset_training_stats():
+    global training_stats, spots_stats
+    training_stats = {
+        "hands_trained": 0,
+        "right_hands": 0,
+        "imprecise_hands": 0,
+        "wrong_hands": 0,
+        "freq_spread_total": 0.0,
+        "ev_loss_total": 0.0,
+        "max_ev_total": 0.0
+    }
+    spots_stats = {}
+
+
+def spots_stats_dict_setdefault(item_id):
+    global spots_stats
+    spots_stats[item_id] = {
+        "hands_trained": 0,
+        "right_hands": 0,
+        "imprecise_hands": 0,
+        "wrong_hands": 0,
+        "freq_spread_total": 0.0,
+        "ev_loss_total": 0.0,
+        "max_ev_total": 0.0
+    }
+
+
 def format_time(seconds):
     seconds = int(seconds)
     hours = seconds // 3600
@@ -375,7 +620,9 @@ def get_right_action_precise_frequency(combo_info: dict):
     carry = 0.0
     actions_range = {}
     last_index = len(combo_info) - 1
+    print(combo_info)
     for i, (action, data) in enumerate(sorted_dict.items()):
+        print(action, data)
         freq = data[0]
         carry = ceil(carry)
         if carry > 0:
@@ -394,7 +641,10 @@ def get_right_action_precise_frequency(combo_info: dict):
             break
     if not right_action:
         right_action = list(sorted_dict.keys())[-1]
+    print(rng, right_action)
+    print(actions_range)
     final_rng = random.randint(actions_range[right_action][1], actions_range[right_action][2])
+    print("*" * 50)
 
     return right_action, final_rng
 
@@ -416,24 +666,29 @@ def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text, 
     if action_choosed == right_action:
         answer_color = "green"
         answer_text_color = "white"
+        answer_result = "right"
+        freq_spread = 1
+        ev_spread = 0
         line1 += f"   {spot_text}   👉 RIGHT ANSWER 👈    Acc/EVloss: (1 / 0)"
         update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
         
-        return 1, 0, right_action_ev
+        return action_choosed, right_action, answer_result, freq_spread, ev_spread, right_action_ev
     else:
         freq_spread = normalize_float(1 - ((right_action_freq - action_choosed_freq) / 100), 4) if right_action_freq > action_choosed_freq else normalize_float(1 - ((action_choosed_freq - right_action_freq) / 100), 4)
         ev_spread = normalize_float(action_choosed_ev - right_action_ev) if right_action_ev > action_choosed_ev else 0
         if ev_spread == 0:
             answer_color = "yellow"
             answer_text_color = "black"
+            answer_result = "imprecise"
             line1 += f"   {spot_text}   👉 IMPRECISE ANSWER 👈    Acc/EVloss: ({freq_spread} / {ev_spread})"
         else:
             answer_color = "red"
             answer_text_color = "black"
+            answer_result = "wrong"
             line1 += f"   {spot_text}   👉 WRONG ANSWER 👈    Acc/EVloss: ({freq_spread} / {ev_spread})"
         update_last_combo_result_frame(line1, line2, answer_color, answer_text_color)
 
-        return freq_spread, ev_spread, right_action_ev
+        return action_choosed, right_action, answer_result, freq_spread, ev_spread, right_action_ev
 
 
 def play(pool, combos_dict, mode_str, spot_string, positions_in_order, positions_actions, pot_odds_and_stacks, spot_actions):
@@ -458,12 +713,16 @@ def play(pool, combos_dict, mode_str, spot_string, positions_in_order, positions
     decision_time_start = time.time()
     root.wait_variable(action_selected)
     decision_time = time.time() - decision_time_start
-    freq_point, ev_point, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text, decision_time)
+    action_choosed, right_action, answer_result, freq_spread, ev_spread, right_action_ev = get_answer(combo, action_choosed, right_action, rng, combos_dict[combo][1], spot_text, decision_time)
 
-    return combo, freq_point, ev_point, right_action_ev, decision_time
+    return combo, action_choosed, right_action, answer_result, freq_spread, ev_spread, right_action_ev, decision_time
 
 def start_training():
     global training, clock_running, clock_start_time, clock_elapsed, paused
+    if not logged_in:
+        messagebox.showwarning("Login required","Login before start!!!", parent=root)
+
+        return
     start_trainer_buttom.config(text="RESTART")
     pause_trainer_buttom.config(text="PAUSE")
     clock_running = False
@@ -481,33 +740,57 @@ def start_training():
         status_label.config(text="NO SPOT SELECTED")
 
         return
+    add_training()
+    add_training_spots()
     start_clock()
     tick_clock()
     status_label.config(text="TRAINING", fg=training_color)
     while training:
-        spot_id = random.choice(treeview_items)
-        choosen_spots_list.selection_set(spot_id)
-        choosen_spots_list.see(spot_id)
-        pool = pools[spot_id]
-        spot_values = choosen_spots_list.item(spot_id, "values")
+        item_id = random.choice(treeview_items)
+        choosen_spots_list.selection_set(item_id)
+        choosen_spots_list.see(item_id)
+        pool = pools[item_id]
+        spot_values = choosen_spots_list.item(item_id, "values")
         depth, hero, spot, villain, chip_mode = spot_values
         mode_depth, positions_actions, pot_odds_and_stacks, actions_frequencies, combos_dict = get_data(depth, hero, spot, villain, chip_mode)
         mode_str, spot_string, spot_position, spot_actions, combos_order, prefolded_combos, spot_max_ev, spot_total_ev = parse_spot(mode_depth, positions_actions, actions_frequencies, combos_dict)
         hero_idx = positions.index(spot_position)
         positions_in_order = positions[hero_idx:] + positions[:hero_idx]
-        combo, freq_point, ev_point, right_action_ev, decision_time = play(pool, combos_dict, mode_str, spot_string, positions_in_order, positions_actions, pot_odds_and_stacks, spot_actions)
-
-        # print(depth, hero, spot, villain, chip_mode)
-        # print(pool)
-
+        combo, action_choosed, right_action, answer_result, freq_spread, ev_spread, right_action_ev, decision_time = play(pool, combos_dict, mode_str, spot_string, positions_in_order, positions_actions, pot_odds_and_stacks, spot_actions)
+        hand = current_hand
+        add_hand(item_id, chip_mode, combo, hand, action_choosed, right_action, answer_result, normalize_float(decision_time, 5), freq_spread, ev_spread, right_action_ev)
+        training_stats["hands_trained"] += 1
+        training_stats[f"{answer_result}_hands"] += 1
+        training_stats["freq_spread_total"] = normalize_float(training_stats["freq_spread_total"] + freq_spread, 4)
+        training_stats["ev_loss_total"] = normalize_float(training_stats["ev_loss_total"] + ev_spread)
+        training_stats["max_ev_total"] = normalize_float(training_stats["max_ev_total"] + right_action_ev)
+        training_right_hands_ratio = normalize_float(training_stats["right_hands"]/training_stats["hands_trained"] * 100, 2)
+        training_imprecise_hands_ratio = normalize_float(training_stats["imprecise_hands"]/training_stats["hands_trained"] * 100, 2)
+        training_wrong_hands_ratio = normalize_float(training_stats["wrong_hands"]/training_stats["hands_trained"] * 100, 2)
+        training_ok_hands_count = training_stats["right_hands"] + training_stats["imprecise_hands"]
+        training_ok_hands_ratio = normalize_float(training_ok_hands_count/training_stats["hands_trained"] * 100, 2)
+        training_accuracy = normalize_float(training_stats["freq_spread_total"] / training_stats["hands_trained"] * 100, 2)
+        spots_stats[item_id]["hands_trained"] += 1
+        spots_stats[item_id][f"{answer_result}_hands"] += 1
+        spots_stats[item_id]["freq_spread_total"] = normalize_float(spots_stats[item_id]["freq_spread_total"] + freq_spread, 4)
+        spots_stats[item_id]["ev_loss_total"] = normalize_float(spots_stats[item_id]["ev_loss_total"] + ev_spread)
+        spots_stats[item_id]["max_ev_total"] = normalize_float(spots_stats[item_id]["max_ev_total"] + right_action_ev)
+        update_streak(answer_result)
+        p_line1 = f"✅{training_right_hands_ratio}% ({training_stats["right_hands"]})  ⚠️{training_imprecise_hands_ratio}% ({training_stats["imprecise_hands"]})  ❎{training_wrong_hands_ratio}% ({training_stats["wrong_hands"]})  👍{training_ok_hands_ratio}% ({training_ok_hands_count})  🔥{current_streak}  🏆{max_streak}"
+        if training_stats["max_ev_total"] > 0:
+            p_line2 = f"HANDS: {training_stats["hands_trained"]} | Acc: {training_accuracy}% | EV loss: {training_stats["ev_loss_total"]}/{training_stats["max_ev_total"]} ({normalize_float(training_stats["ev_loss_total"]/training_stats["max_ev_total"]*100)}%)"
+        else:
+            p_line2 = f"HANDS: {training_stats["hands_trained"]} | Acc: {training_accuracy}% | EV loss: {training_stats["ev_loss_total"]}/{training_stats["max_ev_total"]}"
+        update_current_result_frame(p_line1, p_line2)
+     
 
 def stop_trainer():
     global training
     training = False
     elapsed = end_clock()
-    print("ELAPSED:", format_time(elapsed))
     start_trainer_buttom.config(text="START")
     status_label.config(text="STOPPED", fg=stopped_color)
+    add_final_results()
 
 
 
@@ -515,11 +798,11 @@ def stop_trainer():
 # ------- ROOT VARIABLES -------
 # ===================================
 logged_in = False
-logged_user_id = None
 logged_username = None
 help_visible = True
 pool_visible = True
 edit_canvas = None
+current_hand = None
 
 current_pool = []
 pools = dict()
@@ -1040,8 +1323,8 @@ def add_solution():
     for item in choosen_spots_list.get_children():
         if choosen_spots_list.item(item, "values") == values:
             return
-    spot_id = choosen_spots_list.insert("", "end", values=values)
-    pools[spot_id] = current_pool
+    item_id = choosen_spots_list.insert("", "end", values=values)
+    pools[item_id] = current_pool
 
 
 def delete_solution():
@@ -1050,15 +1333,15 @@ def delete_solution():
     if not selected_items:
 
         return
-    for spot_id in selected_items:
-        pools.pop(spot_id, None)
-        choosen_spots_list.delete(spot_id)
+    for item_id in selected_items:
+        pools.pop(item_id, None)
+        choosen_spots_list.delete(item_id)
 
 
 def delete_all_solutions():
     global pools
-    for spot_id in choosen_spots_list.get_children():
-        choosen_spots_list.delete(spot_id)
+    for item_id in choosen_spots_list.get_children():
+        choosen_spots_list.delete(item_id)
     pools.clear()
 
 
@@ -1068,15 +1351,15 @@ def show_selected_spot_treeview(event=None):
     if not selected:
 
         return
-    spot_id = selected[0]
-    item = choosen_spots_list.item(spot_id)
+    item_id = selected[0]
+    item = choosen_spots_list.item(item_id)
     values = item["values"]
     depth = values[0]
     hero = values[1]
     villain = values[3]
     spot = values[2]
     folder = values[4]
-    pool = pools[spot_id]
+    pool = pools[item_id]
     # folder_var.set(folder)
     # depth_var.set(depth)
     # spot_action_text_var.set(spot)
@@ -1111,6 +1394,7 @@ def show_clock():
 
 
 def draw_table(canvas: tk. Canvas, combo, rng, positions_in_order, pot_odds_and_stacks, positions_actions, spot_text):
+    global current_hand
     canvas.delete("all")
     canvas.create_oval(oval_center_x - oval_radius_x, oval_center_y - oval_radius_y, oval_center_x + oval_radius_x, oval_center_y + oval_radius_y, fill=table_color, outline="black")
     spot_text_parts = spot_text.split(" | ")
@@ -1129,6 +1413,8 @@ def draw_table(canvas: tk. Canvas, combo, rng, positions_in_order, pot_odds_and_
     for i in range(8):
         seats.append(Seat(i, canvas, oval_center_x, oval_center_y, oval_radius_x, oval_radius_y, combo, positions_in_order, pot_odds_and_stacks, positions_actions))
         seats[i].draw_seat(combo)
+        if i == 0:
+            current_hand = seats[0].hand
 
 
 def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str, line1_text_color:str):
@@ -1138,6 +1424,12 @@ def update_last_combo_result_frame(line_1: str, line_2: str, line1_color: str, l
     line1_rect = lr_canvas.create_rectangle(x1 - 2, y1 - 2, x2 + 2, y2 + 2, fill=line1_color, outline="")
     lr_canvas.tag_raise(line1_text, line1_rect)
     lr_canvas.create_text(last_result_line2_x, last_result_line2_y, font=("Arial", 12, "bold"), text=line_2, fill="white")
+
+
+def update_current_result_frame(line_1: str, line_2: str):
+    cr_canvas.delete("all")
+    cr_canvas.create_text(current_progress_line1_x, current_progress_line1_y + 1, font=("Arial", 12, "bold"), text=line_1, fill="white")
+    cr_canvas.create_text(current_progress_line2_x, current_progress_line2_y, font=("Arial", 12, "bold"), text=line_2, fill="white")
 
 
 
