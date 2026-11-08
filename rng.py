@@ -93,7 +93,17 @@ def get_right_action_evenly(combo_info: dict[str, list[int | float]]):
     right_action = actions[idx]
     # print(f'{right_action = }')
 
-    return (right_action, )
+    return right_action, rng
+
+def get_playable_any_ev_action(combo_info: dict[str, list[int | float]]):
+    rng = 100
+    right_actions = tuple()
+    for action, (freq, ev) in combo_info.items():
+        if freq > 0:
+            right_actions += (action, )
+    print(right_actions)
+    return right_actions, rng
+
 
 
 
@@ -104,23 +114,23 @@ def main() -> None:
     # combo_info = {'Allin 50': [11, -2.03], 'Raise 2': [30.5, 0.1], 'Call': [49.5, 0.1], 'Fold': [9, 0]}
     # combo_info = {'Allin 50': [5, -2.03], 'Raise 2': [40.5, 0.1], 'Raise 3': [5, 0.05], 'Call': [49.5, 0.1], 'Fold': [0, 0]}
 
-    results_dict = {k: 0 for k in combo_info.keys()}
-    iterations = 10_000_000
-    t_start = time.time()
-    for _ in range(iterations):
-        right_action, right_action_freq, right_action_ev, final_rng = get_right_action_by_frequency(combo_info)
-        for k, v in combo_info.items():
-            if k == right_action:
-                results_dict[k] += 1
-    results_dict = {k: round(v / iterations * 100, 2) for k, v in results_dict.items()}
-    t_elapsed = time.time() - t_start
-    print()
-    print('ITERATIONS:', f'{iterations:_}')
-    print(f'{"EXPECTED":>12} {"ACHIEVED":>12}')
-    for k, v in results_dict.items():
-        print(f'{combo_info[k][0]:>12} {v:>12}')
-    print()
-    print("TIME ELAPSED:", get_time_string(t_elapsed))
+    # results_dict = {k: 0 for k in combo_info.keys()}
+    # iterations = 10_000_000
+    # t_start = time.time()
+    # for _ in range(iterations):
+    #     right_action, right_action_freq, right_action_ev, final_rng = get_right_action_by_frequency(combo_info)
+    #     for k, v in combo_info.items():
+    #         if k == right_action:
+    #             results_dict[k] += 1
+    # results_dict = {k: round(v / iterations * 100, 2) for k, v in results_dict.items()}
+    # t_elapsed = time.time() - t_start
+    # print()
+    # print('ITERATIONS:', f'{iterations:_}')
+    # print(f'{"EXPECTED":>12} {"ACHIEVED":>12}')
+    # for k, v in results_dict.items():
+    #     print(f'{combo_info[k][0]:>12} {v:>12}')
+    # print()
+    # print("TIME ELAPSED:", get_time_string(t_elapsed))
 
     # results_dict = {k: 0 for k in combo_info.keys()}
     # iterations = 10_000_000
@@ -139,6 +149,7 @@ def main() -> None:
     #     print(f'{v:>12}')
     # print()
     # print("TIME ELAPSED:", get_time_string(t_elapsed))
+    get_playable_any_ev_action(combo_info)
 
 
 

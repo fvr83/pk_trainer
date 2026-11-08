@@ -670,6 +670,15 @@ def get_right_action_evenly(combo_info: dict[str, list[int | float]]):
     return right_action, rng
 
 
+def get_playable_any_ev_action(combo_info: dict[str, list[int | float]]):
+    rng = 100
+    right_actions = tuple()
+    for action, (freq, ev) in combo_info.items():
+        if freq > 0:
+            right_actions += (action, )
+    
+    return right_actions, rng
+
 
 def get_answer(combo, action_choosed, right_action, rng, combo_info, spot_text, decision_time):
     right_action_freq = [v[0] for k, v in combo_info.items() if k == right_action][0]
