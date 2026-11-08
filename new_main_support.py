@@ -531,7 +531,6 @@ def draw_pool_chart(pool: set[str]):
 # ----- COMBOS POOL FUNCTIONS -----
 # ====================================
 def get_combo_pool(pool_type, pool_var_1, pool_var_2, spot_total_ev, spot_max_ev, combos_dict, combos_order, prefolded_combos):
-    print(pool_type, pool_var_1, pool_var_2)
     pool = []
     if "tot" in pool_type:
         percent = float(pool_var_1) / 100
